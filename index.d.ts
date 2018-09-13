@@ -7,19 +7,19 @@ type WhereAndOr<SObject> = {
   or?: Where<SObject>
 }
 
-type WhereCondition = {
-  eq?: any
-  ne?: any
-  lt?: any
-  lte?: any
-  gt?: any
-  gte?: any
+type WhereCondition<T> = {
+  eq?: T
+  ne?: T
+  lt?: T
+  lte?: T
+  gt?: T
+  gte?: T
   like?: string
-  in?: any[]
-  nin?: any[]
+  in?: T[]
+  nin?: T[]
 }
 
-type Where<SObject> = WhereAndOr<SObject> & { [Field in keyof SObject]: WhereCondition }
+type Where<SObject> = WhereAndOr<SObject> & { [Field in keyof SObject]: WhereCondition<SObject[Field]> }
 
 type Criteria<SObject> = {
   where?: Where<SObject>
@@ -68,7 +68,5 @@ type RemoteObject = {
 }
 
 interface Window {
-  SObjectModel: {
-    [object_name: string]: new () => RemoteObject
-  }
+  SObjectModel: { [object_name: string]: new () => RemoteObject }
 }
