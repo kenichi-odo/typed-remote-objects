@@ -39,5 +39,5 @@
     "_deps:update": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && ncu -a && yarn",
     "build": "webpack --progress --hide-modules"
   },
-  "version": "1.0.0-alpha.16"
+  "version": "1.0.0-alpha.17"
 }

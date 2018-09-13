@@ -141,7 +141,7 @@ const _Retrieve = <SObject extends object, Extensions>({
   )
 }
 
-export const VisualforceRemoteObjects = <SObject extends object, Extensions = {}>({
+export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
   object_name,
   extensions = {} as Extensions,
 }: {
