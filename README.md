@@ -14,7 +14,7 @@ yarn add typed-remote-objects
 
 # Setup
 
-```html
+```
 <apex:page>
 
   <apex:remoteObjectModel name="CustomObject__c">
@@ -73,7 +73,7 @@ const CustomObject__c = () => {
 /**
 
 // No extensions
-const CustomObject__c = () => TypedRemoteObjects<CustomObject__c, Extensions>({ object_name: 'CustomObject__c' })
+const CustomObject__c = () => TypedRemoteObjects<CustomObject__c>({ object_name: 'CustomObject__c' })
 
 */
 ;(async () => {
