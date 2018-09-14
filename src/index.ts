@@ -1,3 +1,72 @@
+type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
+
+type Order<SObject> = { [Field in keyof SObject]: OrderType }[]
+
+type WhereAndOr<SObject> = {
+  and?: Where<SObject>
+  or?: Where<SObject>
+}
+
+type WhereCondition<T> = {
+  eq?: T
+  ne?: T
+  lt?: T
+  lte?: T
+  gt?: T
+  gte?: T
+  like?: string
+  in?: T[]
+  nin?: T[]
+}
+
+type Where<SObject> = WhereAndOr<SObject> & { [Field in keyof SObject]: WhereCondition<SObject[Field]> }
+
+type Criteria<SObject> = {
+  where?: Where<SObject>
+  orderby?: Order<SObject>
+  limit?: number
+  offset?: number
+}
+
+type RemoteObjectModel<SObject> = {
+  get: (field_name: keyof SObject) => any
+  _fields: { [field_name: string]: any }
+}
+
+type RemotingEvent = {
+  action: string
+  method: string
+  ref: boolean
+  result: { [key: string]: any }
+  status: boolean
+  statusCode: number
+  tid: number
+  type: string
+}
+
+type RemoteObject = {
+  retrieve: <SObject>(
+    criteria: Criteria<SObject>,
+    result: (error: Error | null, records: RemoteObjectModel<SObject>[]) => void,
+  ) => void
+  create: (
+    props: { [field_name: string]: any },
+    result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void,
+  ) => void
+  update: (
+    ids: string[],
+    props: { [field_name: string]: any },
+    result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void,
+  ) => void
+  del: (id: string, result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void) => void
+}
+
+declare global {
+  interface Window {
+    SObjectModel: { [object_name: string]: new () => RemoteObject }
+  }
+}
+
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
 
 const _GetSObjectModel = ({ object_name }: { object_name: string }): RemoteObject => {
@@ -198,6 +267,61 @@ const _Retrieves = <SObject extends object, Extensions>({
   )
 }
 
+type Funcs<SObject, Extensions> = {
+  _wheres: Where<SObject>
+  _orders: Order<SObject>
+  _limit: number | null
+  _offset: number | null
+  _size: number | null
+  Find: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    id: string,
+  ) => Promise<Readonly<SObject> & Model<SObject, Extensions> & Extensions | null>
+  FindAll: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    ...ids: string[]
+  ) => Promise<(Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]>
+  FindAllBy: <Field extends keyof SObject>(
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    field: Field,
+    condition: WhereCondition<SObject[Field]>,
+  ) => Promise<(Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]>
+  Where: <Field extends keyof SObject>(
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    field: Field,
+    condition: WhereCondition<SObject[Field]>,
+  ) => Readonly<SObject> & Funcs<SObject, Extensions>
+  Order: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    field: keyof SObject,
+    order_type: OrderType,
+  ) => Readonly<SObject> & Funcs<SObject, Extensions>
+  Limit: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    size: number,
+  ) => Readonly<SObject> & Funcs<SObject, Extensions>
+  Offset: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    size: number,
+  ) => Readonly<SObject> & Funcs<SObject, Extensions>
+  Size: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    size: number,
+  ) => Readonly<SObject> & Funcs<SObject, Extensions>
+  All: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+  ) => Promise<(Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]>
+  Set: <Field extends keyof SObject>(
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    f: Field,
+    v: SObject[Field],
+  ) => Readonly<SObject> & Funcs<SObject, Extensions>
+  Insert: (
+    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+  ) => Promise<Readonly<SObject> & Model<SObject, Extensions> & Extensions>
+  _Clear: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => void
+}
+
 export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
   object_name,
   extensions = {} as Extensions,
@@ -206,13 +330,13 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
   extensions?: Extensions
 }) => {
   const s_object = {} as Readonly<SObject>
-  const funcs = {
+  const funcs: Funcs<SObject, Extensions> = {
     _wheres: {} as Where<SObject>,
-    _orders: [] as Order<SObject>,
-    _limit: null as number | null,
-    _offset: null as number | null,
-    _size: null as number | null,
-    async Find(id: string) {
+    _orders: [],
+    _limit: null,
+    _offset: null,
+    _size: null,
+    async Find(id) {
       const _ = await _Retrieve<SObject, Extensions>({
         object_name,
         extensions,
@@ -223,7 +347,7 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
 
       return _.length === 0 ? null : _[0]
     },
-    async FindAll(...ids: string[]) {
+    async FindAll(ids) {
       const criteria: Criteria<SObject> = { where: { Id: { in: ids } } as any }
       if (this._orders.length !== 0) {
         criteria.orderby = this._orders
@@ -251,7 +375,7 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         size,
       })
     },
-    async FindAllBy<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>) {
+    async FindAllBy(field, condition) {
       const criteria: Criteria<SObject> = { where: { [field]: condition } as any }
       if (this._orders.length !== 0) {
         criteria.orderby = this._orders
@@ -272,24 +396,24 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
 
       this._Clear()
 
-      return await _Retrieves<SObject, Extensions>({
+      return await _Retrieves({
         object_name,
         extensions,
         criteria,
         size,
       })
     },
-    Where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>) {
+    Where(field, condition) {
       const _ = Object.assign({}, this)
-      _._wheres[field] = condition as any
+      _._wheres[field as any] = condition
       return _
     },
-    Order(field: keyof SObject, order_type: OrderType) {
+    Order(field, order_type) {
       const _ = Object.assign({}, this)
       _._orders.push({ [field]: order_type } as any)
       return _
     },
-    Limit(size: number) {
+    Limit(size) {
       if (size > 100) {
         throw 'Please specify it within 100.'
       }
@@ -298,7 +422,7 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       _._limit = size
       return _
     },
-    Offset(size: number) {
+    Offset(size) {
       if (size > 2000) {
         throw 'Please specify it within 2000.'
       }
@@ -307,7 +431,7 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       _._offset = size
       return _
     },
-    Size(size: number) {
+    Size(size) {
       if (size > 2000) {
         throw 'Please specify it within 2000.'
       }
@@ -348,7 +472,7 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         size,
       })
     },
-    Set<Field extends keyof SObject>(f: Field, v: SObject[Field]) {
+    Set(f, v) {
       const _ = Object.assign({}, this)
       _[f as string] = v
       return _
@@ -375,5 +499,5 @@ export const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
     },
   }
 
-  return Object.assign({}, s_object, funcs)
+  return Object.assign(s_object, funcs)
 }
