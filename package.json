@@ -1,6 +1,6 @@
 {
   "author": "Kenichi Odo <kenichi.odo@icloud.com>",
-  "description": "A type safe and immutable Visualforce remote objects.",
+  "description": "A Visualforce remote objects that is type safe and immutable and resembles an active record.",
   "devDependencies": {
     "@babel/core": "^7.0.1",
     "@babel/polyfill": "^7.0.0",
@@ -20,7 +20,11 @@
     "README.md"
   ],
   "keywords": [
+    "active record",
+    "activerecord",
+    "immutable",
     "remote objects",
+    "salesforce remote objects",
     "salesforce",
     "sobject",
     "soql",
@@ -40,5 +44,5 @@
     "build": "webpack --progress --hide-modules"
   },
   "types": "./lib/index.d.ts",
-  "version": "1.0.4"
+  "version": "1.0.5"
 }

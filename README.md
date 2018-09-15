@@ -82,7 +82,7 @@ const CustomObject__c = () => TypedRemoteObjects<CustomObject__c>({ object_name:
 
   // result2 => CustomObject__c[]
   const result2 = await CustomObject__c()
-    .Size(256) // If "Limit" "offset" is not set, you can specify the number of records
+    .Size(256) // If `Limit` `Offset` is not set, you can specify the number of records(Maximum 2000)
     .FindAll('salesforce_id_1', 'salesforce_id_2')
 
   const result3 = await CustomObject__c()
@@ -96,7 +96,7 @@ const CustomObject__c = () => TypedRemoteObjects<CustomObject__c>({ object_name:
   const result4 = await CustomObject__c()
     .Where('Name', { eq: 'foo' })
     .Where('FieldNumber__c', { ne: 0 }) // Multiple conditions can be specified
-    .All()
+    .All() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
 
   // inserted_record => CustomObject__c
   const inserted_record = await CustomObject__c()
