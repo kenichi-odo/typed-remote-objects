@@ -12,7 +12,7 @@ npm i typed-remote-objects
 yarn add typed-remote-objects
 ```
 
-# Setup
+# Preparation (in Visualforce)
 
 ```
 <apex:page>
@@ -37,7 +37,7 @@ yarn add typed-remote-objects
 # Usage
 
 ```ts
-import { TypedRemoteObjects } from 'typed-remote-objects'
+import { init } from 'typed-remote-objects'
 
 type CustomObject__c = {
   Id?: string | null
@@ -59,7 +59,7 @@ type Extensions = {
 }
 
 const CustomObject__c = () => {
-  return TypedRemoteObjects<CustomObject__c, Extensions>({
+  return init<CustomObject__c, Extensions>({
     object_name: 'CustomObject__c',
     extensions: {
       getFormattedCreatedDate() {
@@ -73,46 +73,46 @@ const CustomObject__c = () => {
 /**
 
 // No extensions
-const CustomObject__c = () => TypedRemoteObjects<CustomObject__c>({ object_name: 'CustomObject__c' })
+const CustomObject__c = () => init<CustomObject__c>({ object_name: 'CustomObject__c' })
 
-*/
+ */
 ;(async () => {
   // result1 => CustomObject__c | null
-  const result1 = await CustomObject__c().Find('salesforce_id')
+  const result1 = await CustomObject__c().find('salesforce_id')
 
   // result2 => CustomObject__c[]
   const result2 = await CustomObject__c()
-    .Size(256) // If `Limit` `Offset` is not set, you can specify the number of records(Maximum 2000)
-    .FindAll('salesforce_id_1', 'salesforce_id_2')
+    .size(256) // If `Limit` `Offset` is not set, you can specify the number of records(Maximum 2000)
+    .findAll('salesforce_id_1', 'salesforce_id_2')
 
   const result3 = await CustomObject__c()
-    .Order('CreatedDate', 'ASC')
-    .Order('FieldDate__c', 'DESC NULLS LAST') // Multiple orders can be specified
-    .Limit(5) // Maximum 100
-    .Offset(10) // Maximum 2000
-    .FindAllBy('OwnerId', { eq: 'salesforce_user_id' })
+    .order('CreatedDate', 'ASC')
+    .order('FieldDate__c', 'DESC NULLS LAST') // Multiple orders can be specified
+    .limit(5) // Maximum 100
+    .offset(10) // Maximum 2000
+    .findAllBy('OwnerId', { eq: 'salesforce_user_id' })
 
   // result4 => CustomObject__c[]
   const result4 = await CustomObject__c()
-    .Where('Name', { eq: 'foo' })
-    .Where('FieldNumber__c', { ne: 0 }) // Multiple conditions can be specified
-    .All() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
+    .where('Name', { eq: 'foo' })
+    .where('FieldNumber__c', { ne: 0 }) // Multiple conditions can be specified
+    .all() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
 
   // inserted_record => CustomObject__c
   const inserted_record = await CustomObject__c()
-    .Set('FieldBoolean__c', false)
-    .Set('FieldString__c', 'text')
-    .Insert()
+    .set('FieldBoolean__c', false)
+    .set('FieldString__c', 'text')
+    .insert()
 
   // formatted_created_date => YYYY-MM-DD
   const formatted_created_date = inserted_record.getFormattedCreatedDate()
 
   // updated_record => CustomObject__c
   const updated_record = await inserted_record
-    .Set('FieldDate__c', new Date())
-    .Set('FieldString__c', null)
-    .Update()
+    .set('FieldDate__c', new Date())
+    .set('FieldString__c', null)
+    .update()
 
-  await updated_record.Delete()
+  await updated_record.delete()
 })()
 ```
