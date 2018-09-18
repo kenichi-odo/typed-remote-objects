@@ -93,23 +93,21 @@ const _create = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise(
-    (resolve: (_: Readonly<SObject> & Model<SObject, Extensions> & Extensions) => void, reject: (_: Error) => void) => {
-      _getSObjectModel({ object_name }).create(props, async (error, ids) => {
-        if (error != null) {
-          reject(error)
-          return
-        }
+  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: Error) => void) => {
+    _getSObjectModel({ object_name }).create(props, async (error, ids) => {
+      if (error != null) {
+        reject(error)
+        return
+      }
 
-        const _ = await _retrieve<SObject, Extensions>({
-          object_name,
-          extensions,
-          criteria: { where: { Id: { eq: ids[0] } } as any },
-        })
-        resolve(_[0])
+      const _ = await _retrieve<SObject, Extensions>({
+        object_name,
+        extensions,
+        criteria: { where: { Id: { eq: ids[0] } } as any },
       })
-    },
-  )
+      resolve(_[0])
+    })
+  })
 }
 
 const _update = <SObject extends object, Extensions>({
@@ -121,24 +119,22 @@ const _update = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise(
-    (resolve: (_: Readonly<SObject> & Model<SObject, Extensions> & Extensions) => void, reject: (_: Error) => void) => {
-      const id = props['Id']
-      _getSObjectModel({ object_name }).update([id], props, async error => {
-        if (error != null) {
-          reject(error)
-          return
-        }
+  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: Error) => void) => {
+    const id = props['Id']
+    _getSObjectModel({ object_name }).update([id], props, async error => {
+      if (error != null) {
+        reject(error)
+        return
+      }
 
-        const _ = await _retrieve<SObject, Extensions>({
-          object_name,
-          extensions,
-          criteria: { where: { Id: { eq: id } } as any },
-        })
-        resolve(_[0])
+      const _ = await _retrieve<SObject, Extensions>({
+        object_name,
+        extensions,
+        criteria: { where: { Id: { eq: id } } as any },
       })
-    },
-  )
+      resolve(_[0])
+    })
+  })
 }
 
 const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
@@ -160,9 +156,11 @@ type Model<SObject, Extensions> = {
     field_name_: Field,
     value_: SObject[Field],
   ) => Readonly<SObject> & Model<SObject, Extensions>
-  update: () => Promise<Readonly<SObject> & Model<SObject, Extensions> & Extensions>
+  update: () => Promise<Record<SObject, Extensions>>
   delete: () => Promise<void>
 }
+
+export type Record<SObject, Extensions = {}> = Readonly<SObject> & Model<SObject, Extensions> & Extensions
 
 const _retrieve = <SObject extends object, Extensions>({
   object_name,
@@ -173,45 +171,40 @@ const _retrieve = <SObject extends object, Extensions>({
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
-  return new Promise(
-    (
-      resolve: (_: (Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]) => void,
-      reject: (_: Error) => void,
-    ) => {
-      _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
-        if (error != null) {
-          reject(error)
-          return
-        }
+  return new Promise((resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
+    _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
+      if (error != null) {
+        reject(error)
+        return
+      }
 
-        resolve(
-          records.map(_ => {
-            const s_object_model: Readonly<SObject> & Model<SObject, Extensions> = {
-              _update_fields: [] as (keyof SObject)[],
-              set(fn_, v_) {
-                const _ = Object.assign({}, this)
-                _[fn_ as string] = v_
-                _._update_fields.push(fn_)
-                return _
-              },
-              async update() {
-                const ops = { Id: this['Id'] } as SObject
-                this._update_fields.forEach(_ => {
-                  ops[_ as string] = this[_]
-                })
-                return await _update({ object_name, extensions, props: ops })
-              },
-              async delete() {
-                await _delete({ object_name, id: this['Id'] })
-              },
-            } as Readonly<SObject> & Model<SObject, Extensions>
-            ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
-            return Object.assign({}, s_object_model, extensions)
-          }),
-        )
-      })
-    },
-  )
+      resolve(
+        records.map(_ => {
+          const s_object_model: Readonly<SObject> & Model<SObject, Extensions> = {
+            _update_fields: [] as (keyof SObject)[],
+            set(fn_, v_) {
+              const _ = Object.assign({}, this)
+              _[fn_ as string] = v_
+              _._update_fields.push(fn_)
+              return _
+            },
+            async update() {
+              const ops = { Id: this['Id'] } as SObject
+              this._update_fields.forEach(_ => {
+                ops[_ as string] = this[_]
+              })
+              return await _update({ object_name, extensions, props: ops })
+            },
+            async delete() {
+              await _delete({ object_name, id: this['Id'] })
+            },
+          } as Readonly<SObject> & Model<SObject, Extensions>
+          ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
+          return Object.assign({}, s_object_model, extensions)
+        }),
+      )
+    })
+  })
 }
 
 const _retrieves = <SObject extends object, Extensions>({
@@ -225,46 +218,41 @@ const _retrieves = <SObject extends object, Extensions>({
   criteria: Criteria<SObject>
   size?: number
 }) => {
-  return new Promise(
-    async (
-      resolve: (_: (Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]) => void,
-      reject: (_: Error) => void,
-    ) => {
-      try {
-        if (criteria.limit != null || criteria.offset != null) {
-          resolve(await _retrieve({ object_name, extensions, criteria }))
-          return
-        }
-
-        if (size == null) {
-          size = 2000
-        }
-
-        let results: (Readonly<SObject> & Model<SObject, Extensions> & Extensions)[] = []
-        let offset = 0
-        while (size > 0) {
-          if (size > 100) {
-            criteria.limit = 100
-            size -= 100
-          } else {
-            criteria.limit = size
-            size = 0
-          }
-
-          if (offset !== 0) criteria.offset = offset
-          const records = await _retrieve({ object_name, extensions, criteria })
-          if (records.length === 0) break
-
-          results = results.concat(records)
-          offset += 100
-        }
-
-        resolve(results)
-      } catch (_) {
-        reject(new Error(_))
+  return new Promise(async (resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
+    try {
+      if (criteria.limit != null || criteria.offset != null) {
+        resolve(await _retrieve({ object_name, extensions, criteria }))
+        return
       }
-    },
-  )
+
+      if (size == null) {
+        size = 2000
+      }
+
+      let results: Record<SObject, Extensions>[] = []
+      let offset = 0
+      while (size > 0) {
+        if (size > 100) {
+          criteria.limit = 100
+          size -= 100
+        } else {
+          criteria.limit = size
+          size = 0
+        }
+
+        if (offset !== 0) criteria.offset = offset
+        const records = await _retrieve({ object_name, extensions, criteria })
+        if (records.length === 0) break
+
+        results = results.concat(records)
+        offset += 100
+      }
+
+      resolve(results)
+    } catch (_) {
+      reject(new Error(_))
+    }
+  })
 }
 
 type Funcs<SObject, Extensions> = {
@@ -276,16 +264,16 @@ type Funcs<SObject, Extensions> = {
   find: (
     this: Readonly<SObject> & Funcs<SObject, Extensions>,
     id: string,
-  ) => Promise<Readonly<SObject> & Model<SObject, Extensions> & Extensions | null>
+  ) => Promise<Record<SObject, Extensions> | null>
   findAll: (
     this: Readonly<SObject> & Funcs<SObject, Extensions>,
     ...ids: string[]
-  ) => Promise<(Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]>
+  ) => Promise<(Record<SObject, Extensions>)[]>
   findAllBy: <Field extends keyof SObject>(
     this: Readonly<SObject> & Funcs<SObject, Extensions>,
     field: Field,
     condition: WhereCondition<SObject[Field]>,
-  ) => Promise<(Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]>
+  ) => Promise<(Record<SObject, Extensions>)[]>
   where: <Field extends keyof SObject>(
     this: Readonly<SObject> & Funcs<SObject, Extensions>,
     field: Field,
@@ -308,17 +296,13 @@ type Funcs<SObject, Extensions> = {
     this: Readonly<SObject> & Funcs<SObject, Extensions>,
     size: number,
   ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  all: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-  ) => Promise<(Readonly<SObject> & Model<SObject, Extensions> & Extensions)[]>
+  all: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => Promise<(Record<SObject, Extensions>)[]>
   set: <Field extends keyof SObject>(
     this: Readonly<SObject> & Funcs<SObject, Extensions>,
     f: Field,
     v: SObject[Field],
   ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  insert: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-  ) => Promise<Readonly<SObject> & Model<SObject, Extensions> & Extensions>
+  insert: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => Promise<Record<SObject, Extensions>>
   _clear: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => void
 }
 
