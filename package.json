@@ -5,7 +5,7 @@
     "@babel/core": "^7.1.0",
     "@babel/polyfill": "^7.0.0",
     "@babel/preset-env": "^7.1.0",
-    "@types/webpack": "^4.4.11",
+    "@types/webpack": "^4.4.12",
     "babel-loader": "^8.0.2",
     "npm-run-all": "^4.1.3",
     "ts-loader": "^5.1.1",
@@ -44,5 +44,5 @@
     "build": "webpack --progress --hide-modules"
   },
   "types": "./lib/index.d.ts",
-  "version": "1.1.2"
+  "version": "1.1.3-beta.1"
 }

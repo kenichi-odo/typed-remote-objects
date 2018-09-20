@@ -150,17 +150,17 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
   })
 }
 
-type Model<SObject, Extensions> = {
+type UpdateModel<SObject, Extensions> = {
   _update_fields: (keyof SObject)[]
   set: <Field extends keyof SObject>(
     field_name_: Field,
     value_: SObject[Field],
-  ) => Readonly<SObject> & Model<SObject, Extensions>
+  ) => Readonly<SObject> & UpdateModel<SObject, Extensions>
   update: () => Promise<Record<SObject, Extensions>>
   delete: () => Promise<void>
 }
 
-export type Record<SObject, Extensions = {}> = Readonly<SObject> & Model<SObject, Extensions> & Extensions
+export type Record<SObject, Extensions = {}> = Readonly<SObject> & UpdateModel<SObject, Extensions> & Extensions
 
 const _retrieve = <SObject extends object, Extensions>({
   object_name,
@@ -180,7 +180,7 @@ const _retrieve = <SObject extends object, Extensions>({
 
       resolve(
         records.map(_ => {
-          const s_object_model: Readonly<SObject> & Model<SObject, Extensions> = {
+          const s_object_model: Readonly<SObject> & UpdateModel<SObject, Extensions> = {
             _update_fields: [] as (keyof SObject)[],
             set(fn_, v_) {
               const _ = Object.assign({}, this)
@@ -198,7 +198,7 @@ const _retrieve = <SObject extends object, Extensions>({
             async delete() {
               await _delete({ object_name, id: this['Id'] })
             },
-          } as Readonly<SObject> & Model<SObject, Extensions>
+          } as Readonly<SObject> & UpdateModel<SObject, Extensions>
           ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
           return Object.assign({}, s_object_model, extensions)
         }),
@@ -255,55 +255,40 @@ const _retrieves = <SObject extends object, Extensions>({
   })
 }
 
+type InsertModel<SObject, Extensions> = Readonly<SObject> & {
+  set: <Field extends keyof SObject>(
+    this: InsertModel<SObject, Extensions>,
+    field_name_: Field,
+    value_: SObject[Field],
+  ) => InsertModel<SObject, Extensions>
+  insert: () => Promise<Record<SObject, Extensions>>
+}
+
 type Funcs<SObject, Extensions> = {
   _wheres: Where<SObject>
   _orders: Order<SObject>
   _limit: number | null
   _offset: number | null
   _size: number | null
-  find: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    id: string,
-  ) => Promise<Record<SObject, Extensions> | null>
-  findAll: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    ...ids: string[]
-  ) => Promise<(Record<SObject, Extensions>)[]>
+  find: (this: Funcs<SObject, Extensions>, id: string) => Promise<Record<SObject, Extensions> | null>
+  findAll: (this: Funcs<SObject, Extensions>, ...ids: string[]) => Promise<(Record<SObject, Extensions>)[]>
   findAllBy: <Field extends keyof SObject>(
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    this: Funcs<SObject, Extensions>,
     field: Field,
     condition: WhereCondition<SObject[Field]>,
   ) => Promise<(Record<SObject, Extensions>)[]>
   where: <Field extends keyof SObject>(
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
+    this: Funcs<SObject, Extensions>,
     field: Field,
     condition: WhereCondition<SObject[Field]>,
-  ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  order: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    field: keyof SObject,
-    order_type: OrderType,
-  ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  limit: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    size: number,
-  ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  offset: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    size: number,
-  ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  size: (
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    size: number,
-  ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  all: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => Promise<(Record<SObject, Extensions>)[]>
-  set: <Field extends keyof SObject>(
-    this: Readonly<SObject> & Funcs<SObject, Extensions>,
-    f: Field,
-    v: SObject[Field],
-  ) => Readonly<SObject> & Funcs<SObject, Extensions>
-  insert: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => Promise<Record<SObject, Extensions>>
-  _clear: (this: Readonly<SObject> & Funcs<SObject, Extensions>) => void
+  ) => Funcs<SObject, Extensions>
+  order: (this: Funcs<SObject, Extensions>, field: keyof SObject, order_type: OrderType) => Funcs<SObject, Extensions>
+  limit: (this: Funcs<SObject, Extensions>, size: number) => Funcs<SObject, Extensions>
+  offset: (this: Funcs<SObject, Extensions>, size: number) => Funcs<SObject, Extensions>
+  size: (this: Funcs<SObject, Extensions>, size: number) => Funcs<SObject, Extensions>
+  all: (this: Funcs<SObject, Extensions>) => Promise<(Record<SObject, Extensions>)[]>
+  _clear: (this: Funcs<SObject, Extensions>) => void
+  new: (_?: Readonly<SObject>) => InsertModel<SObject, Extensions>
 }
 
 export const init = <SObject extends object, Extensions = {}>({
@@ -313,8 +298,7 @@ export const init = <SObject extends object, Extensions = {}>({
   object_name: string
   extensions?: Extensions
 }) => {
-  const s_object = {} as Readonly<SObject>
-  const funcs: Funcs<SObject, Extensions> = {
+  const init_funcs: Funcs<SObject, Extensions> = {
     _wheres: {} as Where<SObject>,
     _orders: [],
     _limit: null,
@@ -456,32 +440,36 @@ export const init = <SObject extends object, Extensions = {}>({
         size,
       })
     },
-    set(f, v) {
-      const _ = Object.assign({}, this)
-      _[f as string] = v
-      return _
-    },
-    async insert() {
-      const props = {} as SObject
-      Object.keys(this)
-        .filter(_ => funcs[_] == null && extensions[_] == null)
-        .forEach(_ => (props[_] = this[_]))
-
-      this._clear()
-
-      return await _create<SObject, Extensions>({ object_name, extensions, props })
-    },
     _clear() {
-      Object.keys(this)
-        .filter(_ => funcs[_] == null && extensions[_] == null)
-        .forEach(_ => delete this[_])
-
       this._wheres = {} as any
       this._orders = []
       this._limit = null
       this._offset = null
     },
+    new(s_object) {
+      if (s_object == null) {
+        s_object = {} as Readonly<SObject>
+      }
+
+      const insert_model_funcs: InsertModel<SObject, Extensions> = {
+        set(f, v) {
+          const _ = Object.assign({}, this)
+          _[f as string] = v
+          return _
+        },
+        async insert() {
+          const props = {} as SObject
+          Object.keys(this)
+            .filter(_ => insert_model_funcs[_] == null)
+            .forEach(_ => (props[_] = this[_]))
+
+          return await _create<SObject, Extensions>({ object_name, extensions, props })
+        },
+      } as InsertModel<SObject, Extensions>
+
+      return Object.assign(s_object, insert_model_funcs)
+    },
   }
 
-  return Object.assign(s_object, funcs)
+  return init_funcs
 }
