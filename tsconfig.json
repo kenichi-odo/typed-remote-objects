@@ -44,7 +44,6 @@
       "webworker"
     ],
     "module": "esnext",
-    "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
@@ -57,7 +56,6 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "target": "es5",
-    "traceResolution": true,
     "typeRoots": ["./node_modules/@types"]
   },
   "exclude": ["node_modules"]

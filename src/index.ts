@@ -218,7 +218,7 @@ const _retrieve = <SObject extends object, Extensions>({
             async delete() {
               await _delete({ object_name, id: this['Id'] })
             },
-          } as Readonly<SObject> & UpdateModel<SObject, Extensions>
+          } as any
           ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
           return Object.assign({}, s_object_model, extensions)
         }),
