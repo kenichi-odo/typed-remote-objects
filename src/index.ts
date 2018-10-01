@@ -95,7 +95,7 @@ const _create = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: Error) => void) => {
+  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: Error | null) => void) => {
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
@@ -103,7 +103,7 @@ const _create = <SObject extends object, Extensions>({
       }
     })
     _getSObjectModel({ object_name }).create(props, async (error, ids) => {
-      if (error != null) {
+      if (ids.length === 0) {
         reject(error)
         return
       }
