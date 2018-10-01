@@ -2,7 +2,7 @@ const Webpack = require('webpack')
 
 module.exports = {
   context: `${__dirname}/src`,
-  devtool: false,
+  devtool: 'source-map',
   entry: { index: ['./index.ts'] },
   mode: 'development',
   module: {
@@ -14,7 +14,7 @@ module.exports = {
       },
     ],
   },
-  output: { filename: '[name].js', libraryTarget: 'umd', path: `${__dirname}/lib` },
+  output: { filename: '[name].js', libraryTarget: 'umd', path: `${__dirname}/lib`, sourceMapFilename: '[file].map' },
   plugins: [new Webpack.DefinePlugin({ 'process.env': { NODE_ENV: JSON.stringify('development') } })],
   resolve: { extensions: ['.ts', '.js'] },
 }

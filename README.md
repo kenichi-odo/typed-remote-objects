@@ -34,10 +34,37 @@ yarn add typed-remote-objects
 </apex:page>
 ```
 
+## When there is no field to be set when inserting a record
+
+Define the overwrite method with Apex,
+
+```java
+public with sharing class ExamplePageClass {
+  @RemoteAction
+  public static Map<String, Object> createCustomObject(String object_name_a, Map<String, Object> fields_a) {
+    CustomObject__c co = new CustomObject__c();
+    insert co;
+    return new Map<String, Object>{ 'id' => co.Id };
+  }
+}
+```
+
+Please call it from Visualforce.
+
+```
+<apex:page controller="ExamplePageClass">
+
+  <apex:remoteObjectModel name="CustomObject__c" create="{!$RemoteAction.ExamplePageClass.createCustomObject}">
+    ...
+  </apex:remoteObjectModel>
+
+</apex:page>
+```
+
 # Usage
 
 ```ts
-import { init, Report } from 'typed-remote-objects'
+import { init, Record } from 'typed-remote-objects'
 
 type SObject = {
   Id?: string | null
@@ -56,15 +83,20 @@ type SObject = {
 // Extensions is optional
 type Extensions = {
   getFormattedCreatedDate: (this: SObject) => string
+  getText(this: SObject & Extensions)
 }
 
 const CustomObject__c = () => {
   return init<SObject, Extensions>({
     object_name: 'CustomObject__c',
+    time_zone: 9, // In Visualforce remote objects, dates included in records are acquired in local time, but when insert and update records they are saved as UTC and differences will occur, so adjust with this property.
     extensions: {
       getFormattedCreatedDate() {
         const cd = this.CreatedDate!
         return `${cd.getFullYear()}-${cd.getMonth() + 1}-${cd.getDate()}`
+      },
+      getText() {
+        return `${this.Name} - ${this.getFormattedCreatedDate()}`
       },
     },
   })
@@ -96,7 +128,7 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
     .all() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
 
   const inserted_record: Record<SObject, Extensions> = await CustomObject__c()
-    .set('FieldBoolean__c', false)
+    .record({ FieldBoolean__c: false })
     .set('FieldString__c', 'text')
     .insert()
 
