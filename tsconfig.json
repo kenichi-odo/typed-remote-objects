@@ -51,7 +51,6 @@
     "noUnusedParameters": true,
     "pretty": true,
     "removeComments": true,
-    "sourceMap": true,
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
