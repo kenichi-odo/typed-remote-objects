@@ -192,6 +192,26 @@ const _retrieve = <SObject extends object, Extensions>({
   criteria: Criteria<SObject>
 }) => {
   return new Promise((resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
+    if (criteria.where != null) {
+      Object.keys(criteria.where).forEach(_ => {
+        const w = criteria.where![_]
+        if (_ === 'and' || _ === 'or') {
+          Object.keys(w).forEach(ao_key_ => {
+            const aow = w[ao_key_]
+            const aov = aow[Object.keys(aow)[0]]
+            if (aov instanceof Date) {
+              aov.setHours(aov.getHours() - time_zone)
+            }
+          })
+          return
+        }
+
+        const v = w[Object.keys(w)[0]]
+        if (v instanceof Date) {
+          v.setHours(v.getHours() - time_zone)
+        }
+      })
+    }
     _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
       if (error != null) {
         reject(error)
@@ -304,6 +324,22 @@ type Funcs<SObject, Extensions> = {
     field: Field,
     condition: WhereCondition<SObject[Field]>,
   ): Funcs<SObject, Extensions>
+  and(
+    this: Funcs<SObject, Extensions>,
+    ...wheres: ((
+      _: {
+        where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
+      },
+    ) => void)[]
+  ): Funcs<SObject, Extensions>
+  or(
+    this: Funcs<SObject, Extensions>,
+    ...wheres: ((
+      _: {
+        where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
+      },
+    ) => void)[]
+  ): Funcs<SObject, Extensions>
   order(this: Funcs<SObject, Extensions>, field: keyof SObject, order_type: OrderType): Funcs<SObject, Extensions>
   limit(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
   offset(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
@@ -401,6 +437,36 @@ export const init = <SObject extends object, Extensions = {}>({
     where(field, condition) {
       const _ = Object.assign({}, this)
       _._wheres[field as any] = condition
+      return _
+    },
+    and(...wheres) {
+      const _ = Object.assign({}, this)
+
+      const ws = {} as Where<SObject>
+      wheres.forEach(w_ => {
+        w_({
+          where(field, condition) {
+            ws[field as any] = condition
+          },
+        })
+      })
+
+      _._wheres.and = ws
+      return _
+    },
+    or(...wheres) {
+      const _ = Object.assign({}, this)
+
+      const ws = {} as Where<SObject>
+      wheres.forEach(w_ => {
+        w_({
+          where(field, condition) {
+            ws[field as any] = condition
+          },
+        })
+      })
+
+      _._wheres.or = ws
       return _
     },
     order(field, order_type) {
