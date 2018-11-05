@@ -255,7 +255,7 @@ const _retrieve = <SObject extends object, Extensions>({
             async delete() {
               const _ = await _delete({ object_name, id: this['Id'] }).catch((_: Error) => _)
               if (_ instanceof Error) {
-                throw Promise.reject(_)
+                throw _
               }
             },
           } as any
