@@ -99,7 +99,9 @@ const _create = <SObject extends object, Extensions>({
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
-        p.setHours(p.getHours() - time_zone)
+        const adjust_date = new Date(p.getTime())
+        adjust_date.setHours(adjust_date.getHours() - time_zone)
+        props[_] = adjust_date
       }
     })
     _getSObjectModel({ object_name }).create(props, async (error, ids) => {
@@ -140,7 +142,9 @@ const _update = <SObject extends object, Extensions>({
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
-        p.setHours(p.getHours() - time_zone)
+        const adjust_date = new Date(p.getTime())
+        adjust_date.setHours(adjust_date.getHours() - time_zone)
+        props[_] = adjust_date
       }
     })
     _getSObjectModel({ object_name }).update([id], props, async error => {
@@ -210,7 +214,9 @@ const _retrieve = <SObject extends object, Extensions>({
             const aow = w[ao_key_]
             const aov = aow[Object.keys(aow)[0]]
             if (aov instanceof Date) {
-              aov.setHours(aov.getHours() - time_zone)
+              const adjust_date = new Date(aov.getTime())
+              adjust_date.setHours(adjust_date.getHours() - time_zone)
+              aow[Object.keys(aow)[0]] = adjust_date
             }
           })
           return
@@ -218,7 +224,9 @@ const _retrieve = <SObject extends object, Extensions>({
 
         const v = w[Object.keys(w)[0]]
         if (v instanceof Date) {
-          v.setHours(v.getHours() - time_zone)
+          const adjust_date = new Date(v.getTime())
+          adjust_date.setHours(adjust_date.getHours() - time_zone)
+          w[Object.keys(w)[0]] = adjust_date
         }
       })
     }
