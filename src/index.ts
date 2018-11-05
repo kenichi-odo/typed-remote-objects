@@ -113,7 +113,12 @@ const _create = <SObject extends object, Extensions>({
         time_zone,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as any },
-      })
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        reject(_)
+        return
+      }
+
       resolve(_[0])
     })
   })
@@ -149,7 +154,12 @@ const _update = <SObject extends object, Extensions>({
         time_zone,
         extensions,
         criteria: { where: { Id: { eq: id } } as any },
-      })
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        reject(_)
+        return
+      }
+
       resolve(_[0])
     })
   })
@@ -212,6 +222,7 @@ const _retrieve = <SObject extends object, Extensions>({
         }
       })
     }
+
     _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
       if (error != null) {
         reject(error)
@@ -233,10 +244,19 @@ const _retrieve = <SObject extends object, Extensions>({
               this._update_fields.forEach(_ => {
                 ops[_ as string] = this[_]
               })
-              return await _update({ object_name, time_zone, extensions, props: ops })
+
+              const _ = await _update({ object_name, time_zone, extensions, props: ops }).catch((_: Error) => _)
+              if (_ instanceof Error) {
+                return Promise.reject(_)
+              }
+
+              return _
             },
             async delete() {
-              await _delete({ object_name, id: this['Id'] })
+              const _ = await _delete({ object_name, id: this['Id'] }).catch((_: Error) => _)
+              if (_ instanceof Error) {
+                throw Promise.reject(_)
+              }
             },
           } as any
           ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
@@ -261,39 +281,45 @@ const _retrieves = <SObject extends object, Extensions>({
   size?: number
 }) => {
   return new Promise(async (resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
-    try {
-      if (criteria.limit != null || criteria.offset != null) {
-        resolve(await _retrieve({ object_name, time_zone, extensions, criteria }))
+    if (criteria.limit != null || criteria.offset != null) {
+      const _ = await _retrieve({ object_name, time_zone, extensions, criteria }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        reject(_)
         return
       }
 
-      if (size == null) {
-        size = 2000
-      }
-
-      let results: Record<SObject, Extensions>[] = []
-      let offset = 0
-      while (size > 0) {
-        if (size > 100) {
-          criteria.limit = 100
-          size -= 100
-        } else {
-          criteria.limit = size
-          size = 0
-        }
-
-        if (offset !== 0) criteria.offset = offset
-        const records = await _retrieve({ object_name, time_zone, extensions, criteria })
-        if (records.length === 0) break
-
-        results = results.concat(records)
-        offset += 100
-      }
-
-      resolve(results)
-    } catch (_) {
-      reject(new Error(_))
+      resolve(_)
+      return
     }
+
+    if (size == null) {
+      size = 2000
+    }
+
+    let results: Record<SObject, Extensions>[] = []
+    let offset = 0
+    while (size > 0) {
+      if (size > 100) {
+        criteria.limit = 100
+        size -= 100
+      } else {
+        criteria.limit = size
+        size = 0
+      }
+
+      if (offset !== 0) criteria.offset = offset
+      const records = await _retrieve({ object_name, time_zone, extensions, criteria }).catch((_: Error) => _)
+      if (records instanceof Error) {
+        reject(records)
+        return
+      }
+      if (records.length === 0) break
+
+      results = results.concat(records)
+      offset += 100
+    }
+
+    resolve(results)
   })
 }
 
@@ -370,7 +396,10 @@ export const init = <SObject extends object, Extensions = {}>({
         time_zone,
         extensions,
         criteria: { where: { Id: { eq: id } } as any, limit: 1 },
-      })
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        return Promise.reject(_)
+      }
 
       this._clear()
 
@@ -397,13 +426,18 @@ export const init = <SObject extends object, Extensions = {}>({
 
       this._clear()
 
-      return await _retrieves<SObject, Extensions>({
+      const _ = await _retrieves<SObject, Extensions>({
         object_name,
         time_zone,
         extensions,
         criteria,
         size,
-      })
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        return Promise.reject(_)
+      }
+
+      return _
     },
     async findAllBy(field, condition) {
       const criteria: Criteria<SObject> = { where: { [field]: condition } as any }
@@ -426,13 +460,18 @@ export const init = <SObject extends object, Extensions = {}>({
 
       this._clear()
 
-      return await _retrieves({
+      const _ = await _retrieves({
         object_name,
         time_zone,
         extensions,
         criteria,
         size,
-      })
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        return Promise.reject(_)
+      }
+
+      return _
     },
     where(field, condition) {
       const _ = Object.assign({}, this)
@@ -526,13 +565,18 @@ export const init = <SObject extends object, Extensions = {}>({
 
       this._clear()
 
-      return await _retrieves<SObject, Extensions>({
+      const _ = await _retrieves<SObject, Extensions>({
         object_name,
         time_zone,
         extensions,
         criteria,
         size,
-      })
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        return Promise.reject(_)
+      }
+
+      return _
     },
     _clear() {
       this._wheres = {} as any
@@ -557,7 +601,14 @@ export const init = <SObject extends object, Extensions = {}>({
             .filter(_ => insert_model_funcs[_] == null)
             .forEach(_ => (props[_] = this[_]))
 
-          return await _create<SObject, Extensions>({ object_name, time_zone, extensions, props })
+          const _ = await _create<SObject, Extensions>({ object_name, time_zone, extensions, props }).catch(
+            (_: Error) => _,
+          )
+          if (_ instanceof Error) {
+            return Promise.reject(_)
+          }
+
+          return _
         },
       } as InsertModel<SObject, Extensions>
 
