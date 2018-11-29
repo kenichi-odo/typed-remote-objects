@@ -190,6 +190,7 @@ type UpdateModel<SObject, Extensions> = {
   ): Readonly<SObject> & UpdateModel<SObject, Extensions>
   update(): Promise<Record<SObject, Extensions>>
   delete(): Promise<void>
+  toObject(): SObject
 }
 
 export type Record<SObject, Extensions = {}> = Readonly<SObject> & UpdateModel<SObject, Extensions> & Extensions
@@ -265,6 +266,15 @@ const _retrieve = <SObject extends object, Extensions>({
               if (_ instanceof Error) {
                 throw _
               }
+            },
+            toObject() {
+              const _ = Object.assign({}, this)
+              delete _._update_fields
+              delete _.set
+              delete _.update
+              delete _.delete
+              delete _.toObject
+              return _
             },
           } as any
           ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
@@ -346,13 +356,6 @@ type Funcs<SObject, Extensions> = {
   _limit: number | null
   _offset: number | null
   _size: number | null
-  find(this: Funcs<SObject, Extensions>, id: string): Promise<Record<SObject, Extensions> | null>
-  findAll(this: Funcs<SObject, Extensions>, ...ids: string[]): Promise<(Record<SObject, Extensions>)[]>
-  findAllBy<Field extends keyof SObject>(
-    this: Funcs<SObject, Extensions>,
-    field: Field,
-    condition: WhereCondition<SObject[Field]>,
-  ): Promise<(Record<SObject, Extensions>)[]>
   where<Field extends keyof SObject>(
     this: Funcs<SObject, Extensions>,
     field: Field,
@@ -378,7 +381,7 @@ type Funcs<SObject, Extensions> = {
   limit(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
   offset(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
   size(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
-  all(this: Funcs<SObject, Extensions>): Promise<(Record<SObject, Extensions>)[]>
+  retrieve(this: Funcs<SObject, Extensions>): Promise<(Record<SObject, Extensions>)[]>
   _clear(this: Funcs<SObject, Extensions>): void
   record(_?: Readonly<SObject>): InsertModel<SObject, Extensions>
 }
@@ -398,89 +401,6 @@ export const init = <SObject extends object, Extensions = {}>({
     _limit: null,
     _offset: null,
     _size: null,
-    async find(id) {
-      const _ = await _retrieve<SObject, Extensions>({
-        object_name,
-        time_zone,
-        extensions,
-        criteria: { where: { Id: { eq: id } } as any, limit: 1 },
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        return Promise.reject(_)
-      }
-
-      this._clear()
-
-      return _.length === 0 ? null : _[0]
-    },
-    async findAll(ids) {
-      const criteria: Criteria<SObject> = { where: { Id: { in: ids } } as any }
-      if (this._orders.length !== 0) {
-        criteria.orderby = this._orders
-      }
-
-      if (this._limit != null) {
-        criteria.limit = this._limit
-      }
-
-      if (this._offset != null) {
-        criteria.offset = this._offset
-      }
-
-      let size: number | undefined
-      if (this._size != null) {
-        size = this._size
-      }
-
-      this._clear()
-
-      const _ = await _retrieves<SObject, Extensions>({
-        object_name,
-        time_zone,
-        extensions,
-        criteria,
-        size,
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        return Promise.reject(_)
-      }
-
-      return _
-    },
-    async findAllBy(field, condition) {
-      const criteria: Criteria<SObject> = { where: { [field]: condition } as any }
-      if (this._orders.length !== 0) {
-        criteria.orderby = this._orders
-      }
-
-      if (this._limit != null) {
-        criteria.limit = this._limit
-      }
-
-      if (this._offset != null) {
-        criteria.offset = this._offset
-      }
-
-      let size: number | undefined
-      if (this._size != null) {
-        size = this._size
-      }
-
-      this._clear()
-
-      const _ = await _retrieves({
-        object_name,
-        time_zone,
-        extensions,
-        criteria,
-        size,
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        return Promise.reject(_)
-      }
-
-      return _
-    },
     where(field, condition) {
       const _ = Object.assign({}, this)
       _._wheres[field as any] = condition
@@ -548,7 +468,7 @@ export const init = <SObject extends object, Extensions = {}>({
       _._size = size
       return _
     },
-    async all() {
+    async retrieve() {
       const criteria: Criteria<SObject> = {}
       if (Object.keys(this._wheres).length !== 0) {
         criteria.where = this._wheres
