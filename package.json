@@ -43,5 +43,5 @@
     "build": "webpack --progress --hide-modules"
   },
   "types": "./lib/index.d.ts",
-  "version": "1.3.0-beta.8"
+  "version": "1.4.0"
 }

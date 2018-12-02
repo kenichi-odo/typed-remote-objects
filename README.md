@@ -41,7 +41,7 @@ Define the overwrite method with Apex,
 ```java
 public with sharing class ExamplePageClass {
   @RemoteAction
-  public static Map<String, Object> createCustomObject(String object_name_a, Map<String, Object> fields_a) {
+  public static Map<String, Object> createCustomObject(String object_name, Map<String, Object> fields) {
     CustomObject__c co = new CustomObject__c();
     insert co;
     return new Map<String, Object>{ 'id' => co.Id };
@@ -59,6 +59,64 @@ Please call it from Visualforce.
   </apex:remoteObjectModel>
 
 </apex:page>
+```
+
+## When handling Attachment object
+
+Define the overwrite method with Apex,
+
+```java
+public with sharing class ExamplePageClass {
+  @RemoteAction
+  public static map<string, object> retrieveAttachment(String object_name, String[] fields, Map<String,Object> criteria) {
+    String[] fs = new String[0];
+    for (String f : fields) {
+      if (f.equals('Body')) continue;
+      fs.add(f);
+    }
+    return RemoteObjectController.retrieve(object_name, fs, criteria);
+  }
+
+  @RemoteAction
+  public static map<string, object> createAttachment(String object_name, Map<String, Object> fields) {
+    return RemoteObjectController.create(
+      object_name,
+      new Map<String, Object>{
+        'Body' => EncodingUtil.base64Decode((String) fields.get('Body')),
+        'ContentType' => fields.get('ContentType'),
+        'Name' => fields.get('Name'),
+        'ParentId' => fields.get('ParentId')
+      }
+    );
+  }
+
+  @RemoteAction
+  public static map<string, object> updateAttachment(String object_name, String[] record_ids, Map<String, Object> fields) {
+    Attachment a = [SELECT Id, Body FROM Attachment WHERE Id = :record_ids.get(0)];
+
+    return RemoteObjectController.updat(
+      object_name,
+      record_ids,
+      new Map<String, Object>{
+        'Body' => EncodingUtil.base64Decode(EncodingUtil.base64Encode(a.Body) + (String) fields.get('Body'))
+      }
+    );
+  }
+}
+```
+
+Please call it from Visualforce.
+
+```html
+<apex:remoteObjectModel
+  name="Attachment"
+  retrieve="{!$RemoteAction.ExamplePageClass.retrieveAttachment}"
+  create="{!$RemoteAction.ExamplePageClass.createAttachment}"
+  update="{!$RemoteAction.ExamplePageClass.updateAttachment}"
+>
+  <apex:remoteObjectField name="Body" /> <apex:remoteObjectField name="ContentType" />
+  <apex:remoteObjectField name="Name" /> <apex:remoteObjectField name="ParentId" />
+</apex:remoteObjectModel>
 ```
 
 # Usage
@@ -146,5 +204,10 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
     .update()
 
   await updated_record.delete()
+
+  // Custom metadata example:
+  const result5: Record<SObject, Extensions>[] = await CustomMetadata__mdt()
+    .limit(100) // Please specify `limit` for error avoidance
+    .retrieve()
 })()
 ```
