@@ -86,12 +86,12 @@ const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObjec
 
 const _create = <SObject extends object, Extensions>({
   object_name,
-  time_zone,
+  time_zone_offset,
   extensions,
   props,
 }: {
   object_name: string
-  time_zone: number
+  time_zone_offset: number
   extensions: Extensions
   props: SObject
 }) => {
@@ -100,7 +100,7 @@ const _create = <SObject extends object, Extensions>({
       const p = props[_]
       if (p instanceof Date) {
         const adjust_date = new Date(p.getTime())
-        adjust_date.setHours(adjust_date.getHours() - time_zone)
+        adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
         props[_] = adjust_date
       }
     })
@@ -112,7 +112,7 @@ const _create = <SObject extends object, Extensions>({
 
       const _ = await _retrieve<SObject, Extensions>({
         object_name,
-        time_zone,
+        time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as any },
       }).catch((_: Error) => _)
@@ -128,12 +128,12 @@ const _create = <SObject extends object, Extensions>({
 
 const _update = <SObject extends object, Extensions>({
   object_name,
-  time_zone,
+  time_zone_offset,
   extensions,
   props,
 }: {
   object_name: string
-  time_zone: number
+  time_zone_offset: number
   extensions: Extensions
   props: SObject
 }) => {
@@ -143,7 +143,7 @@ const _update = <SObject extends object, Extensions>({
       const p = props[_]
       if (p instanceof Date) {
         const adjust_date = new Date(p.getTime())
-        adjust_date.setHours(adjust_date.getHours() - time_zone)
+        adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
         props[_] = adjust_date
       }
     })
@@ -155,7 +155,7 @@ const _update = <SObject extends object, Extensions>({
 
       const _ = await _retrieve<SObject, Extensions>({
         object_name,
-        time_zone,
+        time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: id } } as any },
       }).catch((_: Error) => _)
@@ -197,12 +197,12 @@ export type Record<SObject, Extensions = {}> = Readonly<SObject> & UpdateModel<S
 
 const _retrieve = <SObject extends object, Extensions>({
   object_name,
-  time_zone,
+  time_zone_offset,
   extensions,
   criteria,
 }: {
   object_name: string
-  time_zone: number
+  time_zone_offset: number
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
@@ -216,7 +216,7 @@ const _retrieve = <SObject extends object, Extensions>({
             const aov = aow[Object.keys(aow)[0]]
             if (aov instanceof Date) {
               const adjust_date = new Date(aov.getTime())
-              adjust_date.setHours(adjust_date.getHours() - time_zone)
+              adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
               aow[Object.keys(aow)[0]] = adjust_date
             }
           })
@@ -226,7 +226,7 @@ const _retrieve = <SObject extends object, Extensions>({
         const v = w[Object.keys(w)[0]]
         if (v instanceof Date) {
           const adjust_date = new Date(v.getTime())
-          adjust_date.setHours(adjust_date.getHours() - time_zone)
+          adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
           w[Object.keys(w)[0]] = adjust_date
         }
       })
@@ -243,7 +243,7 @@ const _retrieve = <SObject extends object, Extensions>({
           const s_object_model: Readonly<SObject> & UpdateModel<SObject, Extensions> = {
             _update_fields: [] as (keyof SObject)[],
             set(fn_, v_) {
-              const _ = Object.assign({}, this)
+              const _ = { ...this }
               _[fn_ as string] = v_
               _._update_fields.push(fn_)
               return _
@@ -254,7 +254,7 @@ const _retrieve = <SObject extends object, Extensions>({
                 ops[_ as string] = this[_]
               })
 
-              const _ = await _update({ object_name, time_zone, extensions, props: ops }).catch((_: Error) => _)
+              const _ = await _update({ object_name, time_zone_offset, extensions, props: ops }).catch((_: Error) => _)
               if (_ instanceof Error) {
                 return Promise.reject(_)
               }
@@ -268,7 +268,7 @@ const _retrieve = <SObject extends object, Extensions>({
               }
             },
             toObject() {
-              const _ = Object.assign({}, this)
+              const _ = { ...this }
               delete _._update_fields
               delete _.set
               delete _.update
@@ -287,20 +287,20 @@ const _retrieve = <SObject extends object, Extensions>({
 
 const _retrieves = <SObject extends object, Extensions>({
   object_name,
-  time_zone,
+  time_zone_offset,
   extensions,
   criteria,
   size,
 }: {
   object_name: string
-  time_zone: number
+  time_zone_offset: number
   extensions: Extensions
   criteria: Criteria<SObject>
   size?: number
 }) => {
   return new Promise(async (resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
     if (criteria.limit != null || criteria.offset != null) {
-      const _ = await _retrieve({ object_name, time_zone, extensions, criteria }).catch((_: Error) => _)
+      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: Error) => _)
       if (_ instanceof Error) {
         reject(_)
         return
@@ -326,7 +326,7 @@ const _retrieves = <SObject extends object, Extensions>({
       }
 
       if (offset !== 0) criteria.offset = offset
-      const records = await _retrieve({ object_name, time_zone, extensions, criteria }).catch((_: Error) => _)
+      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: Error) => _)
       if (records instanceof Error) {
         reject(records)
         return
@@ -388,11 +388,11 @@ type Funcs<SObject, Extensions> = {
 
 export const init = <SObject extends object, Extensions = {}>({
   object_name,
-  time_zone,
+  time_zone_offset,
   extensions = {} as Extensions,
 }: {
   object_name: string
-  time_zone: number
+  time_zone_offset: number
   extensions?: Extensions
 }) => {
   const init_funcs: Funcs<SObject, Extensions> = {
@@ -402,12 +402,12 @@ export const init = <SObject extends object, Extensions = {}>({
     _offset: null,
     _size: null,
     where(field, condition) {
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
       _._wheres[field as any] = condition
       return _
     },
     and(...wheres) {
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
 
       const ws = {} as Where<SObject>
       wheres.forEach(w_ => {
@@ -422,7 +422,7 @@ export const init = <SObject extends object, Extensions = {}>({
       return _
     },
     or(...wheres) {
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
 
       const ws = {} as Where<SObject>
       wheres.forEach(w_ => {
@@ -437,7 +437,7 @@ export const init = <SObject extends object, Extensions = {}>({
       return _
     },
     order(field, order_type) {
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
       _._orders.push({ [field]: order_type } as any)
       return _
     },
@@ -446,7 +446,7 @@ export const init = <SObject extends object, Extensions = {}>({
         throw 'Please specify it within 100.'
       }
 
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
       _._limit = size
       return _
     },
@@ -455,7 +455,7 @@ export const init = <SObject extends object, Extensions = {}>({
         throw 'Please specify it within 2000.'
       }
 
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
       _._offset = size
       return _
     },
@@ -464,7 +464,7 @@ export const init = <SObject extends object, Extensions = {}>({
         throw 'Please specify it within 2000.'
       }
 
-      const _ = Object.assign({}, this)
+      const _ = { ...this }
       _._size = size
       return _
     },
@@ -495,7 +495,7 @@ export const init = <SObject extends object, Extensions = {}>({
 
       const _ = await _retrieves<SObject, Extensions>({
         object_name,
-        time_zone,
+        time_zone_offset,
         extensions,
         criteria,
         size,
@@ -529,7 +529,7 @@ export const init = <SObject extends object, Extensions = {}>({
             .filter(_ => insert_model_funcs[_] == null)
             .forEach(_ => (props[_] = this[_]))
 
-          const _ = await _create<SObject, Extensions>({ object_name, time_zone, extensions, props }).catch(
+          const _ = await _create<SObject, Extensions>({ object_name, time_zone_offset, extensions, props }).catch(
             (_: Error) => _,
           )
           if (_ instanceof Error) {
@@ -540,7 +540,7 @@ export const init = <SObject extends object, Extensions = {}>({
         },
       } as InsertModel<SObject, Extensions>
 
-      return Object.assign(s_object, insert_model_funcs)
+      return Object.assign({}, s_object, insert_model_funcs)
     },
   }
 

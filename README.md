@@ -89,7 +89,7 @@ type Extensions = {
 const CustomObject__c = () => {
   return init<SObject, Extensions>({
     object_name: 'CustomObject__c',
-    time_zone: 9, // In Visualforce remote objects, dates included in records are acquired in local time, but when insert and update records they are saved as UTC and differences will occur, so adjust with this property.
+    time_zone_offset: 9, // In Visualforce remote objects, dates included in records are acquired in local time, but when insert and update records they are saved as UTC and differences will occur, so adjust with this property.
     extensions: {
       getFormattedCreatedDate() {
         const cd = this.CreatedDate!
@@ -109,23 +109,28 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
 
  */
 ;(async () => {
-  const result1: Record<SObject, Extensions> | null = await CustomObject__c().find('salesforce_id')
+  const result1: Record<SObject, Extensions>[] = await CustomObject__c()
+    .where('Id', { eq: 'salesforce_id' })
+    .limit(1)
+    .retrieve()
 
   const result2: Record<SObject, Extensions>[] = await CustomObject__c()
+    .where('Id', { in: ['salesforce_id_1', 'salesforce_id_2'] })
     .size(256) // If `Limit` `Offset` is not set, you can specify the number of records(Maximum 2000)
-    .findAll('salesforce_id_1', 'salesforce_id_2')
+    .retrieve()
 
   const result3: Record<SObject, Extensions>[] = await CustomObject__c()
+    .where('OwnerId', { eq: 'salesforce_user_id' })
     .order('CreatedDate', 'ASC')
     .order('FieldDate__c', 'DESC NULLS LAST') // Multiple orders can be specified
     .limit(5) // Maximum 100
     .offset(10) // Maximum 2000
-    .findAllBy('OwnerId', { eq: 'salesforce_user_id' })
+    .retrieve()
 
   const result4: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('Name', { eq: 'foo' })
     .where('FieldNumber__c', { ne: 0 }) // Multiple conditions can be specified
-    .all() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
+    .retrieve() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
 
   const inserted_record: Record<SObject, Extensions> = await CustomObject__c()
     .record({ FieldBoolean__c: false })
