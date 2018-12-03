@@ -140,8 +140,8 @@ type SObject = {
 
 // Extensions is optional
 type Extensions = {
-  getFormattedCreatedDate: (this: SObject) => string
-  getText(this: SObject & Extensions)
+  getFormattedCreatedDate(this: SObject): string
+  getText(this: SObject & Extensions): string
 }
 
 const CustomObject__c = () => {
@@ -167,14 +167,17 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
 
  */
 ;(async () => {
+  // Retrieves
   const result1: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('Id', { eq: 'salesforce_id' })
     .limit(1)
     .retrieve()
 
+  const obj = result1[0].toObject() // Returns an object literal without methods or functions
+
   const result2: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('Id', { in: ['salesforce_id_1', 'salesforce_id_2'] })
-    .size(256) // If `Limit` `Offset` is not set, you can specify the number of records(Maximum 2000)
+    .size(256) // If `limit()` `offset()` is not set, you can specify the number of records with `size()` (Maximum 2000)
     .retrieve()
 
   const result3: Record<SObject, Extensions>[] = await CustomObject__c()
@@ -188,15 +191,34 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
   const result4: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('Name', { eq: 'foo' })
     .where('FieldNumber__c', { ne: 0 }) // Multiple conditions can be specified
-    .retrieve() // If `Limit` `Offset` `Size` is not set, that retrieve up to 2000 records that exist
+    .retrieve() // If `limit()` `offset()` `size()` is not set, that retrieve up to 2000 records that exist
 
+  // AND, OR pattern
+  const result5: Record<SObject, Extensions>[] = await CustomObject__c()
+    .and(_ => _.where('FieldString__c', { eq: 'text' }), _ => _.where('FieldBoolean__c', { eq: false }))
+    .retrieve()
+
+  const result6: Record<SObject, Extensions>[] = await CustomObject__c()
+    .or(_ => _.where('FieldString__c', { eq: 'text' }), _ => _.where('FieldBoolean__c', { eq: false }))
+    .retrieve()
+
+  // You can also specify conditions in the conventional format
+  const co = CustomObject__c()
+  co._wheres = {
+    and: {
+      FieldString__c: { eq: 'text' },
+      FieldBoolean__c: { eq: false },
+    },
+  }
+  const result7: Record<SObject, Extensions>[] = await co.retrieve()
+
+  // CUDs
   const inserted_record: Record<SObject, Extensions> = await CustomObject__c()
     .record({ FieldBoolean__c: false })
     .set('FieldString__c', 'text')
     .insert()
 
-  // formatted_created_date => YYYY-MM-DD
-  const formatted_created_date = inserted_record.getFormattedCreatedDate()
+  const formatted_created_date = inserted_record.getFormattedCreatedDate() // formatted_created_date => YYYY-MM-DD
 
   const updated_record: Record<SObject, Extensions> = await inserted_record
     .set('FieldDate__c', new Date())
@@ -205,8 +227,8 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
 
   await updated_record.delete()
 
-  // Custom metadata example:
-  const result5: Record<SObject, Extensions>[] = await CustomMetadata__mdt()
+  // Custom metadata example
+  const result8: Record<SObject, Extensions>[] = await CustomMetadata__mdt()
     .limit(100) // Please specify `limit` for error avoidance
     .retrieve()
 })()
