@@ -168,17 +168,16 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
  */
 ;(async () => {
   // Retrieves
-  const result1: Record<SObject, Extensions>[] = await CustomObject__c()
+  const result1: Record<SObject, Extensions> | null = await CustomObject__c()
     .where('Id', { eq: 'salesforce_id' })
-    .limit(1)
-    .retrieve()
+    .one() // Retrieve with `limit (1)`
 
-  const obj = result1[0].toObject() // Returns an object literal without methods or functions
+  const obj = result1!.toObject() // Returns an object literal without methods or functions
 
   const result2: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('Id', { in: ['salesforce_id_1', 'salesforce_id_2'] })
     .size(256) // If `limit()` `offset()` is not set, you can specify the number of records with `size()` (Maximum 2000)
-    .retrieve()
+    .all()
 
   const result3: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('OwnerId', { eq: 'salesforce_user_id' })
@@ -186,21 +185,21 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
     .order('FieldDate__c', 'DESC NULLS LAST') // Multiple orders can be specified
     .limit(5) // Maximum 100
     .offset(10) // Maximum 2000
-    .retrieve()
+    .all()
 
   const result4: Record<SObject, Extensions>[] = await CustomObject__c()
     .where('Name', { eq: 'foo' })
     .where('FieldNumber__c', { ne: 0 }) // Multiple conditions can be specified
-    .retrieve() // If `limit()` `offset()` `size()` is not set, that retrieve up to 2000 records that exist
+    .all() // If `limit()` `offset()` `size()` is not set, that retrieve up to 2000 records that exist
 
   // AND, OR pattern
   const result5: Record<SObject, Extensions>[] = await CustomObject__c()
     .and(_ => _.where('FieldString__c', { eq: 'text' }), _ => _.where('FieldBoolean__c', { eq: false }))
-    .retrieve()
+    .all()
 
   const result6: Record<SObject, Extensions>[] = await CustomObject__c()
     .or(_ => _.where('FieldString__c', { eq: 'text' }), _ => _.where('FieldBoolean__c', { eq: false }))
-    .retrieve()
+    .all()
 
   // You can also specify conditions in the conventional format
   const co = CustomObject__c()
@@ -210,7 +209,7 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
       FieldBoolean__c: { eq: false },
     },
   }
-  const result7: Record<SObject, Extensions>[] = await co.retrieve()
+  const result7: Record<SObject, Extensions>[] = await co.all()
 
   // CUDs
   const inserted_record: Record<SObject, Extensions> = await CustomObject__c()
@@ -230,6 +229,6 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
   // Custom metadata example
   const result8: Record<SObject, Extensions>[] = await CustomMetadata__mdt()
     .limit(100) // Please specify `limit` for error avoidance
-    .retrieve()
+    .all()
 })()
 ```

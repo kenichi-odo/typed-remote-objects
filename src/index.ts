@@ -381,7 +381,8 @@ type Funcs<SObject, Extensions> = {
   limit(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
   offset(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
   size(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
-  retrieve(this: Funcs<SObject, Extensions>): Promise<(Record<SObject, Extensions>)[]>
+  one(this: Funcs<SObject, Extensions>): Promise<Record<SObject, Extensions> | null>
+  all(this: Funcs<SObject, Extensions>): Promise<(Record<SObject, Extensions>)[]>
   _clear(this: Funcs<SObject, Extensions>): void
   record(_?: Readonly<SObject>): InsertModel<SObject, Extensions>
 }
@@ -468,7 +469,36 @@ export const init = <SObject extends object, Extensions = {}>({
       _._size = size
       return _
     },
-    async retrieve() {
+    async one() {
+      const criteria: Criteria<SObject> = {}
+      if (Object.keys(this._wheres).length !== 0) {
+        criteria.where = this._wheres
+      }
+
+      if (this._orders.length !== 0) {
+        criteria.orderby = this._orders
+      }
+
+      criteria.limit = 1
+      criteria.offset = undefined
+
+      this._clear()
+
+      const _ = await _retrieve<SObject, Extensions>({
+        object_name,
+        time_zone_offset,
+        extensions,
+        criteria,
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
+        return Promise.reject(_)
+      }
+
+      this._clear()
+
+      return _.length === 0 ? null : _[0]
+    },
+    async all() {
       const criteria: Criteria<SObject> = {}
       if (Object.keys(this._wheres).length !== 0) {
         criteria.where = this._wheres

@@ -2,9 +2,9 @@
   "author": "Kenichi Odo <kenichi.odo@icloud.com>",
   "description": "A Visualforce remote objects that is type safe and immutable and resembles an active record.",
   "devDependencies": {
-    "@babel/core": "^7.1.6",
+    "@babel/core": "^7.2.0",
     "@babel/polyfill": "^7.0.0",
-    "@babel/preset-env": "^7.1.6",
+    "@babel/preset-env": "^7.2.0",
     "@types/webpack": "^4.4.20",
     "babel-loader": "^8.0.4",
     "ts-loader": "^5.3.1",
@@ -43,5 +43,5 @@
     "build": "webpack --progress --hide-modules"
   },
   "types": "./lib/index.d.ts",
-  "version": "1.4.1-beta.3"
+  "version": "1.4.1-beta.4"
 }
