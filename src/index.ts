@@ -1,3 +1,5 @@
+const Deepmerge = require('deepmerge')
+
 type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 
 type Order<SObject> = { [Field in keyof SObject]: OrderType }[]
@@ -243,7 +245,7 @@ const _retrieve = <SObject extends object, Extensions>({
           const s_object_model: Readonly<SObject> & UpdateModel<SObject, Extensions> = {
             _update_fields: [] as (keyof SObject)[],
             set(fn_, v_) {
-              const _ = { ...this }
+              const _ = Deepmerge({}, this)
               _[fn_ as string] = v_
               _._update_fields.push(fn_)
               return _
@@ -268,7 +270,7 @@ const _retrieve = <SObject extends object, Extensions>({
               }
             },
             toObject() {
-              const _ = { ...this }
+              const _ = Deepmerge({}, this)
               delete _._update_fields
               delete _.set
               delete _.update
@@ -278,7 +280,7 @@ const _retrieve = <SObject extends object, Extensions>({
             },
           } as any
           ;(Object.keys(_._fields) as (keyof SObject)[]).forEach(key => (s_object_model[key] = _.get(key)))
-          return Object.assign({}, s_object_model, extensions)
+          return Deepmerge.all([{}, s_object_model, extensions])
         }),
       )
     })
@@ -403,12 +405,12 @@ export const init = <SObject extends object, Extensions = {}>({
     _offset: null,
     _size: null,
     where(field, condition) {
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
       _._wheres[field as any] = condition
       return _
     },
     and(...wheres) {
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
 
       const ws = {} as Where<SObject>
       wheres.forEach(w_ => {
@@ -423,7 +425,7 @@ export const init = <SObject extends object, Extensions = {}>({
       return _
     },
     or(...wheres) {
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
 
       const ws = {} as Where<SObject>
       wheres.forEach(w_ => {
@@ -438,7 +440,7 @@ export const init = <SObject extends object, Extensions = {}>({
       return _
     },
     order(field, order_type) {
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
       _._orders.push({ [field]: order_type } as any)
       return _
     },
@@ -447,7 +449,7 @@ export const init = <SObject extends object, Extensions = {}>({
         throw 'Please specify it within 100.'
       }
 
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
       _._limit = size
       return _
     },
@@ -456,7 +458,7 @@ export const init = <SObject extends object, Extensions = {}>({
         throw 'Please specify it within 2000.'
       }
 
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
       _._offset = size
       return _
     },
@@ -465,7 +467,7 @@ export const init = <SObject extends object, Extensions = {}>({
         throw 'Please specify it within 2000.'
       }
 
-      const _ = { ...this }
+      const _ = Deepmerge({}, this)
       _._size = size
       return _
     },
@@ -549,7 +551,7 @@ export const init = <SObject extends object, Extensions = {}>({
 
       const insert_model_funcs: InsertModel<SObject, Extensions> = {
         set(f, v) {
-          const _ = Object.assign({}, this)
+          const _ = Deepmerge({}, this)
           _[f as string] = v
           return _
         },
@@ -570,7 +572,7 @@ export const init = <SObject extends object, Extensions = {}>({
         },
       } as InsertModel<SObject, Extensions>
 
-      return Object.assign({}, s_object, insert_model_funcs)
+      return Deepmerge.all([{}, s_object, insert_model_funcs])
     },
   }
 

@@ -1,18 +1,18 @@
-# Installation
+## Installation
 
-## npm
+### npm
 
 ```sh
 npm i typed-remote-objects
 ```
 
-## Yarn
+### Yarn
 
 ```sh
 yarn add typed-remote-objects
 ```
 
-# Preparation (in Visualforce)
+## Preparation (in Visualforce)
 
 ```
 <apex:page>
@@ -34,7 +34,7 @@ yarn add typed-remote-objects
 </apex:page>
 ```
 
-## When there is no field to be set when inserting a record
+### When there is no field to be set when inserting a record
 
 Define the overwrite method with Apex,
 
@@ -61,7 +61,7 @@ Please call it from Visualforce.
 </apex:page>
 ```
 
-## When handling Attachment object
+### When handling Attachment object
 
 Define the overwrite method with Apex,
 
@@ -119,7 +119,7 @@ Please call it from Visualforce.
 </apex:remoteObjectModel>
 ```
 
-# Usage
+## Usage
 
 ```ts
 import { init, Record } from 'typed-remote-objects'
@@ -145,22 +145,22 @@ type Extensions = {
 }
 
 const CustomObject__c = () => {
-  return init<SObject, Extensions>({
-    object_name: 'CustomObject__c',
-    time_zone_offset: 9, // In Visualforce remote objects, dates included in records are acquired in local time, but when insert and update records they are saved as UTC and differences will occur, so adjust with this property.
-    extensions: {
-      getFormattedCreatedDate() {
-        const cd = this.CreatedDate!
-        return `${cd.getFullYear()}-${cd.getMonth() + 1}-${cd.getDate()}`
+    return init<SObject, Extensions>({
+      object_name: 'CustomObject__c',
+      time_zone_offset: 9, // In Visualforce remote objects, dates included in records are acquired in local time, but when insert and update records they are saved as UTC and differences will occur, so adjust with this property.
+      extensions: {
+        getFormattedCreatedDate() {
+          const cd = this.CreatedDate!
+          return `${cd.getFullYear()}-${cd.getMonth() + 1}-${cd.getDate()}`
+        },
+        getText() {
+          return `${this.Name} - ${this.getFormattedCreatedDate()}`
+        },
       },
-      getText() {
-        return `${this.Name} - ${this.getFormattedCreatedDate()}`
-      },
-    },
-  })
-}
+    })
+  }
 
-/**
+  /**
 
 // No extensions
 const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
@@ -232,3 +232,7 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
     .all()
 })()
 ```
+
+## Demo
+
+[kenichi-odo/slds-feeds-sample: Sample feeds using salesforce lightning design system (with Salesforce DX, Vue.js and TypeScript).](https://github.com/kenichi-odo/slds-feeds-sample)
