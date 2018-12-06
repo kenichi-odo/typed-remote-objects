@@ -114,8 +114,10 @@ Please call it from Visualforce.
   create="{!$RemoteAction.ExamplePageClass.createAttachment}"
   update="{!$RemoteAction.ExamplePageClass.updateAttachment}"
 >
-  <apex:remoteObjectField name="Body" /> <apex:remoteObjectField name="ContentType" />
-  <apex:remoteObjectField name="Name" /> <apex:remoteObjectField name="ParentId" />
+  <apex:remoteObjectField name="Body" />
+  <apex:remoteObjectField name="ContentType" />
+  <apex:remoteObjectField name="Name" />
+  <apex:remoteObjectField name="ParentId" />
 </apex:remoteObjectModel>
 ```
 
@@ -232,6 +234,20 @@ const CustomObject__c = () => init<SObject>({ object_name: 'CustomObject__c' })
     .all()
 })()
 ```
+
+## Sample
+
+### Insert
+
+![Insert](/documents/images/insert.gif)
+
+### Update and Delete
+
+![Update and Delete](/documents/images/update-delete.gif)
+
+### Retrieve
+
+![Retrieve](/documents/images/retrieve.gif)
 
 ## Demo
 
