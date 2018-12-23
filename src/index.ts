@@ -117,7 +117,7 @@ const _create = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as any },
-      }).catch((_: Error) => _)
+      }).catch(_ => new Error(_))
       if (_ instanceof Error) {
         reject(_)
         return
@@ -160,7 +160,7 @@ const _update = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: id } } as any },
-      }).catch((_: Error) => _)
+      }).catch(_ => new Error(_))
       if (_ instanceof Error) {
         reject(_)
         return
@@ -256,7 +256,9 @@ const _retrieve = <SObject extends object, Extensions>({
                 ops[_ as string] = this[_]
               })
 
-              const _ = await _update({ object_name, time_zone_offset, extensions, props: ops }).catch((_: Error) => _)
+              const _ = await _update({ object_name, time_zone_offset, extensions, props: ops }).catch(
+                _ => new Error(_),
+              )
               if (_ instanceof Error) {
                 return Promise.reject(_)
               }
@@ -264,7 +266,7 @@ const _retrieve = <SObject extends object, Extensions>({
               return _
             },
             async delete() {
-              const _ = await _delete({ object_name, id: this['Id'] }).catch((_: Error) => _)
+              const _ = await _delete({ object_name, id: this['Id'] }).catch(_ => new Error(_))
               if (_ instanceof Error) {
                 throw _
               }
@@ -302,7 +304,7 @@ const _retrieves = <SObject extends object, Extensions>({
 }) => {
   return new Promise(async (resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
     if (criteria.limit != null || criteria.offset != null) {
-      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: Error) => _)
+      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch(_ => new Error(_))
       if (_ instanceof Error) {
         reject(_)
         return
@@ -328,7 +330,7 @@ const _retrieves = <SObject extends object, Extensions>({
       }
 
       if (offset !== 0) criteria.offset = offset
-      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: Error) => _)
+      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch(_ => new Error(_))
       if (records instanceof Error) {
         reject(records)
         return
@@ -491,7 +493,7 @@ export const init = <SObject extends object, Extensions = {}>({
         time_zone_offset,
         extensions,
         criteria,
-      }).catch((_: Error) => _)
+      }).catch(_ => new Error(_))
       if (_ instanceof Error) {
         return Promise.reject(_)
       }
@@ -531,7 +533,7 @@ export const init = <SObject extends object, Extensions = {}>({
         extensions,
         criteria,
         size,
-      }).catch((_: Error) => _)
+      }).catch(_ => new Error(_))
       if (_ instanceof Error) {
         return Promise.reject(_)
       }
