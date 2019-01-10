@@ -6,12 +6,12 @@
     "@babel/polyfill": "^7.2.5",
     "@babel/preset-env": "^7.2.3",
     "@types/webpack": "^4.4.22",
-    "babel-loader": "^8.0.4",
+    "babel-loader": "^8.0.5",
     "deepmerge": "^3.0.0",
-    "ts-loader": "^5.3.2",
+    "ts-loader": "^5.3.3",
     "typescript": "^3.2.2",
     "webpack": "^4.28.2",
-    "webpack-cli": "^3.1.2"
+    "webpack-cli": "^3.2.1"
   },
   "files": [
     "lib",
@@ -43,6 +43,6 @@
     "_deps:update": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && ncu -a && yarn",
     "build": "webpack --progress --hide-modules"
   },
-  "types": "./lib/index.d.ts",
-  "version": "1.5.1"
+  "types": "./lib/types/index.d.ts",
+  "version": "1.6.0"
 }

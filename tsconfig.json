@@ -3,7 +3,7 @@
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
     "declaration": true,
-    "declarationDir": "./lib",
+    "declarationDir": "./lib/types",
     "downlevelIteration": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,

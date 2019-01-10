@@ -1,89 +1,38 @@
+declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
+
 const Deepmerge = require('deepmerge')
 
-type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
-
-type Order<SObject> = { [Field in keyof SObject]: OrderType }[]
-
-type WhereAndOr<SObject> = {
-  and?: Where<SObject>
-  or?: Where<SObject>
-}
-
-type WhereCondition<T> = {
-  eq?: T
-  ne?: T
-  lt?: T
-  lte?: T
-  gt?: T
-  gte?: T
-  like?: string
-  in?: T[]
-  nin?: T[]
-}
-
-type Where<SObject> = WhereAndOr<SObject> & { [Field in keyof SObject]: WhereCondition<SObject[Field]> }
-
-type Criteria<SObject> = {
-  where?: Where<SObject>
-  orderby?: Order<SObject>
-  limit?: number
-  offset?: number
-}
-
-type RemoteObjectModel<SObject> = {
-  get: (field_name: keyof SObject) => any
-  _fields: { [field_name: string]: any }
-}
-
-type RemotingEvent = {
-  action: string
-  method: string
-  ref: boolean
-  result: { [key: string]: any }
-  status: boolean
-  statusCode: number
-  tid: number
-  type: string
-}
-
-type RemoteObject = {
-  retrieve<SObject>(
-    criteria: Criteria<SObject>,
-    result: (error: Error | null, records: RemoteObjectModel<SObject>[]) => void,
-  ): void
-  create(
-    props: { [field_name: string]: any },
-    result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void,
-  ): void
-  update(
-    ids: string[],
-    props: { [field_name: string]: any },
-    result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void,
-  ): void
-  del(id: string, result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void): void
-}
-
-declare global {
-  interface Window {
-    SObjectModel: { [object_name: string]: new () => RemoteObject }
-  }
-}
+import { Funcs, InsertModel, Record, UpdateModel } from './types'
+import { RemoteObject, Criteria, Where } from './s-object-model'
 
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
 
 const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObject => {
   const som = _s_object_models[object_name]
   if (som == null) {
-    if (window.SObjectModel[object_name] == null) {
+    if (SObjectModel[object_name] == null) {
       throw `Object name \`${object_name}\` is unknown. Please check the remote object component definition on Visualforce.`
     }
 
-    const som = new window.SObjectModel[object_name]()
+    const som = new SObjectModel[object_name]()
     _s_object_models[object_name] = som
     return som
   }
 
   return _s_object_models[object_name]!
+}
+
+export class RemoteObjectError extends Error {
+  public attr
+
+  constructor(error: Error, attr) {
+    super(error.message)
+
+    this.name = error.name
+    this.attr = attr
+
+    Object.setPrototypeOf(this, RemoteObjectError.prototype)
+  }
 }
 
 const _create = <SObject extends object, Extensions>({
@@ -97,7 +46,7 @@ const _create = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: Error | null) => void) => {
+  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: RemoteObjectError) => void) => {
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
@@ -108,7 +57,7 @@ const _create = <SObject extends object, Extensions>({
     })
     _getSObjectModel({ object_name }).create(props, async (error, ids) => {
       if (ids.length === 0) {
-        reject(error)
+        reject(new RemoteObjectError(error!, { props }))
         return
       }
 
@@ -117,8 +66,8 @@ const _create = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as any },
-      }).catch(_ => new Error(_))
-      if (_ instanceof Error) {
+      }).catch((_: RemoteObjectError) => _)
+      if (_ instanceof RemoteObjectError) {
         reject(_)
         return
       }
@@ -139,7 +88,7 @@ const _update = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: Error) => void) => {
+  return new Promise((resolve: (_: Record<SObject, Extensions>) => void, reject: (_: RemoteObjectError) => void) => {
     const id = props['Id']
     Object.keys(props).forEach(_ => {
       const p = props[_]
@@ -151,7 +100,7 @@ const _update = <SObject extends object, Extensions>({
     })
     _getSObjectModel({ object_name }).update([id], props, async error => {
       if (error != null) {
-        reject(error)
+        reject(new RemoteObjectError(error, { props }))
         return
       }
 
@@ -160,8 +109,8 @@ const _update = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: id } } as any },
-      }).catch(_ => new Error(_))
-      if (_ instanceof Error) {
+      }).catch((_: RemoteObjectError) => _)
+      if (_ instanceof RemoteObjectError) {
         reject(_)
         return
       }
@@ -172,10 +121,10 @@ const _update = <SObject extends object, Extensions>({
 }
 
 const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
-  return new Promise<void>((resolve: () => void, reject: (_: Error) => void) => {
+  return new Promise<void>((resolve: () => void, reject: (_: RemoteObjectError) => void) => {
     _getSObjectModel({ object_name }).del(id, error => {
       if (error != null) {
-        reject(error)
+        reject(new RemoteObjectError(error, { id }))
         return
       }
 
@@ -183,19 +132,6 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
     })
   })
 }
-
-type UpdateModel<SObject, Extensions> = {
-  _update_fields: (keyof SObject)[]
-  set<Field extends keyof SObject>(
-    field_name_: Field,
-    value_: SObject[Field],
-  ): Readonly<SObject> & UpdateModel<SObject, Extensions>
-  update(): Promise<Record<SObject, Extensions>>
-  delete(): Promise<void>
-  toObject(): SObject
-}
-
-export type Record<SObject, Extensions = {}> = Readonly<SObject> & UpdateModel<SObject, Extensions> & Extensions
 
 const _retrieve = <SObject extends object, Extensions>({
   object_name,
@@ -208,7 +144,7 @@ const _retrieve = <SObject extends object, Extensions>({
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
-  return new Promise((resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
+  return new Promise((resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: RemoteObjectError) => void) => {
     if (criteria.where != null) {
       Object.keys(criteria.where).forEach(_ => {
         const w = criteria.where![_]
@@ -236,7 +172,7 @@ const _retrieve = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
       if (error != null) {
-        reject(error)
+        reject(new RemoteObjectError(error, { criteria }))
         return
       }
 
@@ -257,17 +193,17 @@ const _retrieve = <SObject extends object, Extensions>({
               })
 
               const _ = await _update({ object_name, time_zone_offset, extensions, props: ops }).catch(
-                _ => new Error(_),
+                (_: RemoteObjectError) => _,
               )
-              if (_ instanceof Error) {
+              if (_ instanceof RemoteObjectError) {
                 return Promise.reject(_)
               }
 
               return _
             },
             async delete() {
-              const _ = await _delete({ object_name, id: this['Id'] }).catch(_ => new Error(_))
-              if (_ instanceof Error) {
+              const _ = await _delete({ object_name, id: this['Id'] }).catch((_: RemoteObjectError) => _)
+              if (_ instanceof RemoteObjectError) {
                 throw _
               }
             },
@@ -302,93 +238,53 @@ const _retrieves = <SObject extends object, Extensions>({
   criteria: Criteria<SObject>
   size?: number
 }) => {
-  return new Promise(async (resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: Error) => void) => {
-    if (criteria.limit != null || criteria.offset != null) {
-      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch(_ => new Error(_))
-      if (_ instanceof Error) {
-        reject(_)
+  return new Promise(
+    async (resolve: (_: Record<SObject, Extensions>[]) => void, reject: (_: RemoteObjectError) => void) => {
+      if (criteria.limit != null || criteria.offset != null) {
+        const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch(
+          (_: RemoteObjectError) => _,
+        )
+        if (_ instanceof RemoteObjectError) {
+          reject(_)
+          return
+        }
+
+        resolve(_)
         return
       }
 
-      resolve(_)
-      return
-    }
-
-    if (size == null) {
-      size = 2000
-    }
-
-    let results: Record<SObject, Extensions>[] = []
-    let offset = 0
-    while (size > 0) {
-      if (size > 100) {
-        criteria.limit = 100
-        size -= 100
-      } else {
-        criteria.limit = size
-        size = 0
+      if (size == null) {
+        size = 2000
       }
 
-      if (offset !== 0) criteria.offset = offset
-      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch(_ => new Error(_))
-      if (records instanceof Error) {
-        reject(records)
-        return
+      let results: Record<SObject, Extensions>[] = []
+      let offset = 0
+      while (size > 0) {
+        if (size > 100) {
+          criteria.limit = 100
+          size -= 100
+        } else {
+          criteria.limit = size
+          size = 0
+        }
+
+        if (offset !== 0) criteria.offset = offset
+        const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch(
+          (_: RemoteObjectError) => _,
+        )
+        if (records instanceof RemoteObjectError) {
+          reject(records)
+          return
+        }
+        if (records.length === 0) break
+
+        results = results.concat(records)
+        offset += 100
       }
-      if (records.length === 0) break
 
-      results = results.concat(records)
-      offset += 100
-    }
-
-    resolve(results)
-  })
-}
-
-type InsertModel<SObject, Extensions> = Readonly<SObject> & {
-  set<Field extends keyof SObject>(
-    this: InsertModel<SObject, Extensions>,
-    field_name_: Field,
-    value_: SObject[Field],
-  ): InsertModel<SObject, Extensions>
-  insert(): Promise<Record<SObject, Extensions>>
-}
-
-type Funcs<SObject, Extensions> = {
-  _wheres: Where<SObject>
-  _orders: Order<SObject>
-  _limit: number | null
-  _offset: number | null
-  _size: number | null
-  where<Field extends keyof SObject>(
-    this: Funcs<SObject, Extensions>,
-    field: Field,
-    condition: WhereCondition<SObject[Field]>,
-  ): Funcs<SObject, Extensions>
-  and(
-    this: Funcs<SObject, Extensions>,
-    ...wheres: ((
-      _: {
-        where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
-      },
-    ) => void)[]
-  ): Funcs<SObject, Extensions>
-  or(
-    this: Funcs<SObject, Extensions>,
-    ...wheres: ((
-      _: {
-        where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
-      },
-    ) => void)[]
-  ): Funcs<SObject, Extensions>
-  order(this: Funcs<SObject, Extensions>, field: keyof SObject, order_type: OrderType): Funcs<SObject, Extensions>
-  limit(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
-  offset(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
-  size(this: Funcs<SObject, Extensions>, size: number): Funcs<SObject, Extensions>
-  one(this: Funcs<SObject, Extensions>): Promise<Record<SObject, Extensions> | null>
-  all(this: Funcs<SObject, Extensions>): Promise<(Record<SObject, Extensions>)[]>
-  _clear(this: Funcs<SObject, Extensions>): void
-  record(_?: Readonly<SObject>): InsertModel<SObject, Extensions>
+      resolve(results)
+    },
+  )
 }
 
 export const init = <SObject extends object, Extensions = {}>({
@@ -493,8 +389,8 @@ export const init = <SObject extends object, Extensions = {}>({
         time_zone_offset,
         extensions,
         criteria,
-      }).catch(_ => new Error(_))
-      if (_ instanceof Error) {
+      }).catch((_: RemoteObjectError) => _)
+      if (_ instanceof RemoteObjectError) {
         return Promise.reject(_)
       }
 
@@ -533,8 +429,8 @@ export const init = <SObject extends object, Extensions = {}>({
         extensions,
         criteria,
         size,
-      }).catch(_ => new Error(_))
-      if (_ instanceof Error) {
+      }).catch((_: RemoteObjectError) => _)
+      if (_ instanceof RemoteObjectError) {
         return Promise.reject(_)
       }
 
@@ -564,9 +460,9 @@ export const init = <SObject extends object, Extensions = {}>({
             .forEach(_ => (props[_] = this[_]))
 
           const _ = await _create<SObject, Extensions>({ object_name, time_zone_offset, extensions, props }).catch(
-            (_: Error) => _,
+            (_: RemoteObjectError) => _,
           )
-          if (_ instanceof Error) {
+          if (_ instanceof RemoteObjectError) {
             return Promise.reject(_)
           }
 
@@ -580,3 +476,5 @@ export const init = <SObject extends object, Extensions = {}>({
 
   return init_funcs
 }
+
+export { Record }
