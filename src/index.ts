@@ -1,6 +1,11 @@
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
-const Deepmerge: <T1, T2>(x: Partial<T1>, y: Partial<T2>) => T1 & T2 = require('deepmerge')
+type a = {
+  <T1, T2>(x: Partial<T1>, y: Partial<T2>): T1 & T2
+  all(objects: object[]): object
+}
+
+const Deepmerge: a = require('deepmerge')
 
 import { WhereCondition, Where, Order, OrderType, Criteria, RemoteObject } from './s-object-model'
 
@@ -18,10 +23,10 @@ class RemoteObjectError extends Error {
 }
 
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
-class RemoteObjectWrapper<SObject> {
+class RemoteObjectWrapper<SObject, Extensions> {
   private remote_object: RemoteObject
 
-  constructor(private object_name: string, private time_zone_offset: number) {
+  constructor(private object_name: string, private time_zone_offset: number, private extensions?: Extensions) {
     const rom = _s_object_models[object_name]
     if (rom == null) {
       if (SObjectModel[object_name] == null) {
@@ -38,159 +43,168 @@ class RemoteObjectWrapper<SObject> {
   }
 
   protected retrieve({ criteria }: { criteria: Criteria<SObject> }) {
-    return new Promise((resolve: (_: TRORecord<SObject>[]) => void, reject: (_: RemoteObjectError) => void) => {
-      if (criteria.where != null) {
-        Object.keys(criteria.where).forEach(_ => {
-          const w = criteria.where![_]
-          if (_ === 'and' || _ === 'or') {
-            Object.keys(w).forEach(ao_key_ => {
-              const aow = w[ao_key_]
-              const aov = aow[Object.keys(aow)[0]]
-              if (aov instanceof Date) {
-                const adjust_date = new Date(aov.getTime())
-                adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
-                aow[Object.keys(aow)[0]] = adjust_date
-              }
-            })
+    return new Promise(
+      (resolve: (_: TRORecord<SObject, Extensions>[]) => void, reject: (_: RemoteObjectError) => void) => {
+        if (criteria.where != null) {
+          Object.keys(criteria.where).forEach(_ => {
+            const w = criteria.where![_]
+            if (_ === 'and' || _ === 'or') {
+              Object.keys(w).forEach(ao_key_ => {
+                const aow = w[ao_key_]
+                const aov = aow[Object.keys(aow)[0]]
+                if (aov instanceof Date) {
+                  const adjust_date = new Date(aov.getTime())
+                  adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
+                  aow[Object.keys(aow)[0]] = adjust_date
+                }
+              })
+              return
+            }
+
+            const v = w[Object.keys(w)[0]]
+            if (v instanceof Date) {
+              const adjust_date = new Date(v.getTime())
+              adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
+              w[Object.keys(w)[0]] = adjust_date
+            }
+          })
+        }
+
+        this.remote_object.retrieve<SObject>(criteria, (error, records) => {
+          if (error != null) {
+            reject(new RemoteObjectError(error, { criteria }))
             return
           }
 
-          const v = w[Object.keys(w)[0]]
-          if (v instanceof Date) {
-            const adjust_date = new Date(v.getTime())
-            adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
-            w[Object.keys(w)[0]] = adjust_date
-          }
+          resolve(
+            records.map(_ => {
+              const props: SObject = {} as SObject
+              Object.keys(_._fields).forEach(field => (props[field] = _.get(field as keyof SObject)))
+              return TypedRemoteObjectRecord<SObject, Extensions>({
+                object_name: this.object_name,
+                time_zone_offset: this.time_zone_offset,
+                props,
+                extensions: this.extensions,
+              })
+            }),
+          )
         })
-      }
-
-      this.remote_object.retrieve<SObject>(criteria, (error, records) => {
-        if (error != null) {
-          reject(new RemoteObjectError(error, { criteria }))
-          return
-        }
-
-        resolve(
-          records.map(_ => {
-            const props: SObject = {} as SObject
-            Object.keys(_._fields).forEach(field => (props[field] = _.get(field as keyof SObject)))
-            return TypedRemoteObjectRecord<SObject>({
-              object_name: this.object_name,
-              time_zone_offset: this.time_zone_offset,
-              props,
-            })
-          }),
-        )
-      })
-    })
+      },
+    )
   }
 
   protected retrieves({ criteria, size }: { criteria: Criteria<SObject>; size?: number }) {
-    return new Promise(async (resolve: (_: TRORecord<SObject>[]) => void, reject: (_: RemoteObjectError) => void) => {
-      if (criteria.limit != null || criteria.offset != null) {
-        const _ = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
-        if (_ instanceof RemoteObjectError) {
-          reject(_)
+    return new Promise(
+      async (resolve: (_: TRORecord<SObject, Extensions>[]) => void, reject: (_: RemoteObjectError) => void) => {
+        if (criteria.limit != null || criteria.offset != null) {
+          const _ = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
+          if (_ instanceof RemoteObjectError) {
+            reject(_)
+            return
+          }
+
+          resolve(_)
           return
         }
 
-        resolve(_)
-        return
-      }
-
-      if (size == null) {
-        size = 2000
-      }
-
-      let results: TRORecord<SObject>[] = []
-      let offset = 0
-      while (size > 0) {
-        if (size > 100) {
-          criteria.limit = 100
-          size -= 100
-        } else {
-          criteria.limit = size
-          size = 0
+        if (size == null) {
+          size = 2000
         }
 
-        if (offset !== 0) criteria.offset = offset
-        const records = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
-        if (records instanceof RemoteObjectError) {
-          reject(records)
-          return
+        let results: TRORecord<SObject, Extensions>[] = []
+        let offset = 0
+        while (size > 0) {
+          if (size > 100) {
+            criteria.limit = 100
+            size -= 100
+          } else {
+            criteria.limit = size
+            size = 0
+          }
+
+          if (offset !== 0) criteria.offset = offset
+          const records = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
+          if (records instanceof RemoteObjectError) {
+            reject(records)
+            return
+          }
+          if (records.length === 0) break
+
+          results = results.concat(records)
+          offset += 100
         }
-        if (records.length === 0) break
 
-        results = results.concat(records)
-        offset += 100
-      }
-
-      resolve(results)
-    })
+        resolve(results)
+      },
+    )
   }
 
   protected create({ props }: { props: SObject }) {
-    return new Promise((resolve: (_: TRORecord<SObject>) => void, reject: (_: RemoteObjectError) => void) => {
-      Object.keys(props).forEach(_ => {
-        const p = props[_]
-        if (p instanceof Date) {
-          const adjust_date = new Date(p.getTime())
-          adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
-          props[_] = adjust_date
-        }
-      })
+    return new Promise(
+      (resolve: (_: TRORecord<SObject, Extensions>) => void, reject: (_: RemoteObjectError) => void) => {
+        Object.keys(props).forEach(_ => {
+          const p = props[_]
+          if (p instanceof Date) {
+            const adjust_date = new Date(p.getTime())
+            adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
+            props[_] = adjust_date
+          }
+        })
 
-      this.remote_object.create(props, async (error, ids) => {
-        if (ids.length === 0) {
-          reject(new RemoteObjectError(error!, { props }))
-          return
-        }
+        this.remote_object.create(props, async (error, ids) => {
+          if (ids.length === 0) {
+            reject(new RemoteObjectError(error!, { props }))
+            return
+          }
 
-        const _ = await this.retrieve({
-          criteria: {
-            where: { Id: { eq: ids[0] } } as Where<SObject>,
-          },
-        }).catch((_: RemoteObjectError) => _)
-        if (_ instanceof RemoteObjectError) {
-          reject(_)
-          return
-        }
+          const _ = await this.retrieve({
+            criteria: {
+              where: { Id: { eq: ids[0] } } as Where<SObject>,
+            },
+          }).catch((_: RemoteObjectError) => _)
+          if (_ instanceof RemoteObjectError) {
+            reject(_)
+            return
+          }
 
-        resolve(_[0])
-      })
-    })
+          resolve(_[0])
+        })
+      },
+    )
   }
 
   protected update({ props }: { props: SObject }) {
-    return new Promise((resolve: (_: TRORecord<SObject>) => void, reject: (_: RemoteObjectError) => void) => {
-      const id = props['Id']
-      Object.keys(props).forEach(_ => {
-        const p = props[_]
-        if (p instanceof Date) {
-          const adjust_date = new Date(p.getTime())
-          adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
-          props[_] = adjust_date
-        }
-      })
-      this.remote_object.update([id], props, async error => {
-        if (error != null) {
-          reject(new RemoteObjectError(error, { props }))
-          return
-        }
+    return new Promise(
+      (resolve: (_: TRORecord<SObject, Extensions>) => void, reject: (_: RemoteObjectError) => void) => {
+        const id = props['Id']
+        Object.keys(props).forEach(_ => {
+          const p = props[_]
+          if (p instanceof Date) {
+            const adjust_date = new Date(p.getTime())
+            adjust_date.setHours(adjust_date.getHours() - this.time_zone_offset)
+            props[_] = adjust_date
+          }
+        })
+        this.remote_object.update([id], props, async error => {
+          if (error != null) {
+            reject(new RemoteObjectError(error, { props }))
+            return
+          }
 
-        const _ = await this.retrieve({
-          criteria: {
-            where: { Id: { eq: id } } as Where<SObject>,
-          },
-        }).catch((_: RemoteObjectError) => _)
-        if (_ instanceof RemoteObjectError) {
-          reject(_)
-          return
-        }
+          const _ = await this.retrieve({
+            criteria: {
+              where: { Id: { eq: id } } as Where<SObject>,
+            },
+          }).catch((_: RemoteObjectError) => _)
+          if (_ instanceof RemoteObjectError) {
+            reject(_)
+            return
+          }
 
-        resolve(_[0])
-      })
-    })
+          resolve(_[0])
+        })
+      },
+    )
   }
 
   protected delete({ id }: { id: string }) {
@@ -207,17 +221,17 @@ class RemoteObjectWrapper<SObject> {
   }
 }
 
-class TRORecordInstance<SObject> extends RemoteObjectWrapper<SObject> {
+class TRORecordInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Extensions> {
   private update_fields: (keyof SObject)[] = []
 
-  constructor(object_name: string, time_zone_offset: number, props: SObject) {
+  constructor(object_name: string, time_zone_offset: number, props: SObject, extensions?: Extensions) {
     super(object_name, time_zone_offset)
 
-    Object.assign(this, props)
+    Object.assign(this, props, extensions)
   }
 
   private clone() {
-    return Deepmerge<{}, TRORecord<SObject>>({}, this as any)
+    return Deepmerge<{}, TRORecord<SObject, Extensions>>({}, this as any)
   }
 
   set<Field extends keyof SObject>(field_name_: Field, value_: SObject[Field]) {
@@ -227,7 +241,7 @@ class TRORecordInstance<SObject> extends RemoteObjectWrapper<SObject> {
     return _
   }
 
-  async update(this: TRORecord<SObject>) {
+  async update(this: TRORecord<SObject, Extensions>) {
     const props = { Id: this['Id'] }
     this.update_fields.forEach(_ => {
       props[_ as string] = this[_]
@@ -249,33 +263,38 @@ class TRORecordInstance<SObject> extends RemoteObjectWrapper<SObject> {
   }
 }
 
-type TRORecord<SObject> = TRORecordInstance<SObject> & Readonly<SObject>
+type TRORecord<SObject, Extensions = {}> = TRORecordInstance<SObject, Extensions> & Readonly<SObject>
 
-const TypedRemoteObjectRecord = <SObject>({
+const TypedRemoteObjectRecord = <SObject, Extensions>({
   object_name,
   time_zone_offset,
   props,
+  extensions,
 }: {
   object_name: string
   time_zone_offset: number
   props: SObject
+  extensions?: Extensions
 }) => {
-  return new TRORecordInstance<SObject>(object_name, time_zone_offset, props) as TRORecord<SObject>
+  return new TRORecordInstance<SObject, Extensions>(object_name, time_zone_offset, props, extensions) as TRORecord<
+    SObject,
+    Extensions
+  >
 }
 
-class TROInstance<SObject> extends RemoteObjectWrapper<SObject> {
+class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Extensions> {
   private wheres: Where<SObject> = {} as Where<SObject>
   private orders: Order<SObject> = []
   private _limit: number | null = null
   private _offset: number | null = null
   private _size: number | null = null
 
-  constructor(object_name: string, time_zone_offset: number) {
-    super(object_name, time_zone_offset)
+  constructor(object_name: string, time_zone_offset: number, extensions?: Extensions) {
+    super(object_name, time_zone_offset, extensions)
   }
 
   private clone() {
-    return Deepmerge<{}, TROInstance<SObject>>({}, this)
+    return Deepmerge<{}, TROInstance<SObject, Extensions>>({}, this)
   }
 
   where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>) {
@@ -427,14 +446,18 @@ class TROInstance<SObject> extends RemoteObjectWrapper<SObject> {
   }
 }
 
-const TypedRemoteObjects = <SObject>({
+const TypedRemoteObjects = <SObject, Extensions = {}>({
   object_name,
   time_zone_offset,
+  extensions,
 }: {
   object_name: string
   time_zone_offset: number
+  extensions?: Extensions
 }) => {
-  return new TROInstance<SObject>(object_name, time_zone_offset)
+  return new TROInstance<SObject, Extensions>(object_name, time_zone_offset, extensions)
 }
 
 export { RemoteObjectError, TRORecord, TypedRemoteObjects }
+
+TypedRemoteObjects<string>({ object_name: '', time_zone_offset: 0, extensions: {} })
