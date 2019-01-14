@@ -1,11 +1,9 @@
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
-type a = {
+const Deepmerge: {
   <T1, T2>(x: Partial<T1>, y: Partial<T2>): T1 & T2
-  all(objects: object[]): object
-}
-
-const Deepmerge: a = require('deepmerge')
+  all(objects: any[]): object
+} = require('deepmerge')
 
 import { WhereCondition, Where, Order, OrderType, Criteria, RemoteObject } from './s-object-model'
 
@@ -224,14 +222,29 @@ class RemoteObjectWrapper<SObject, Extensions> {
 class TRORecordInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Extensions> {
   private update_fields: (keyof SObject)[] = []
 
-  constructor(object_name: string, time_zone_offset: number, props: SObject, extensions?: Extensions) {
+  private constructor(object_name: string, time_zone_offset: number) {
     super(object_name, time_zone_offset)
+  }
 
-    Object.assign(this, props, extensions)
+  static getInstance<SObject, Extensions>(
+    object_name: string,
+    time_zone_offset: number,
+    props: SObject,
+    extensions: Extensions = {} as Extensions,
+  ) {
+    const _ = Deepmerge.all([
+      new TRORecordInstance<SObject, Extensions>(object_name, time_zone_offset),
+      props,
+      extensions,
+    ])
+    Object.setPrototypeOf(_, TRORecordInstance.prototype)
+    return _
   }
 
   private clone() {
-    return Deepmerge<{}, TRORecord<SObject, Extensions>>({}, this as any)
+    const _ = Deepmerge<{}, TRORecord<SObject, Extensions>>({}, this as any)
+    Object.setPrototypeOf(_, TRORecordInstance.prototype)
+    return _
   }
 
   set<Field extends keyof SObject>(field_name_: Field, value_: SObject[Field]) {
@@ -263,7 +276,7 @@ class TRORecordInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject
   }
 }
 
-type TRORecord<SObject, Extensions = {}> = TRORecordInstance<SObject, Extensions> & Readonly<SObject>
+type TRORecord<SObject, Extensions = {}> = TRORecordInstance<SObject, Extensions> & Readonly<SObject> & Extensions
 
 const TypedRemoteObjectRecord = <SObject, Extensions>({
   object_name,
@@ -276,15 +289,17 @@ const TypedRemoteObjectRecord = <SObject, Extensions>({
   props: SObject
   extensions?: Extensions
 }) => {
-  return new TRORecordInstance<SObject, Extensions>(object_name, time_zone_offset, props, extensions) as TRORecord<
-    SObject,
-    Extensions
-  >
+  return TRORecordInstance.getInstance<SObject, Extensions>(
+    object_name,
+    time_zone_offset,
+    props,
+    extensions,
+  ) as TRORecord<SObject, Extensions>
 }
 
 class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Extensions> {
-  private wheres: Where<SObject> = {} as Where<SObject>
-  private orders: Order<SObject> = []
+  private _wheres: Where<SObject> = {} as Where<SObject>
+  private _orders: Order<SObject> = []
   private _limit: number | null = null
   private _offset: number | null = null
   private _size: number | null = null
@@ -294,12 +309,20 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
   }
 
   private clone() {
-    return Deepmerge<{}, TROInstance<SObject, Extensions>>({}, this)
+    const _ = Deepmerge<{}, TROInstance<SObject, Extensions>>({}, this)
+    Object.setPrototypeOf(_, TROInstance.prototype)
+    return _
   }
 
   where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>) {
     const _ = this.clone()
-    _.wheres[field as string] = condition
+    _._wheres[field as string] = condition
+    return _
+  }
+
+  wheres(wheres: Where<SObject>) {
+    const _ = this.clone()
+    _._wheres = wheres
     return _
   }
 
@@ -321,7 +344,7 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
       })
     })
 
-    _.wheres.and = ws
+    _._wheres.and = ws
     return _
   }
 
@@ -343,13 +366,13 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
       })
     })
 
-    _.wheres.or = ws
+    _._wheres.or = ws
     return _
   }
 
   order(field: keyof SObject, order_type: OrderType) {
     const _ = this.clone()
-    _.orders.push({ [field]: order_type } as { [Field in keyof SObject]: OrderType })
+    _._orders.push({ [field]: order_type } as { [Field in keyof SObject]: OrderType })
     return _
   }
 
@@ -389,12 +412,12 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
       offset: undefined,
     }
 
-    if (Object.keys(this.wheres).length !== 0) {
-      criteria.where = this.wheres
+    if (Object.keys(this._wheres).length !== 0) {
+      criteria.where = this._wheres
     }
 
-    if (this.orders.length !== 0) {
-      criteria.orderby = this.orders
+    if (this._orders.length !== 0) {
+      criteria.orderby = this._orders
     }
 
     const _ = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
@@ -407,12 +430,12 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
 
   async all() {
     const criteria: Criteria<SObject> = {}
-    if (Object.keys(this.wheres).length !== 0) {
-      criteria.where = this.wheres
+    if (Object.keys(this._wheres).length !== 0) {
+      criteria.where = this._wheres
     }
 
-    if (this.orders.length !== 0) {
-      criteria.orderby = this.orders
+    if (this._orders.length !== 0) {
+      criteria.orderby = this._orders
     }
 
     if (this._limit != null) {
@@ -459,5 +482,3 @@ const TypedRemoteObjects = <SObject, Extensions = {}>({
 }
 
 export { RemoteObjectError, TRORecord, TypedRemoteObjects }
-
-TypedRemoteObjects<string>({ object_name: '', time_zone_offset: 0, extensions: {} })
