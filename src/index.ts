@@ -470,14 +470,20 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
 }
 
 const TypedRemoteObjects = <SObject, Extensions = {}>({
+  namespace,
   object_name,
   time_zone_offset,
   extensions,
 }: {
+  namespace?: string
   object_name: string
   time_zone_offset: number
   extensions?: Extensions
 }) => {
+  if (namespace != null) {
+    object_name = `${namespace}__${object_name}`
+  }
+
   return new TROInstance<SObject, Extensions>(object_name, time_zone_offset, extensions)
 }
 
