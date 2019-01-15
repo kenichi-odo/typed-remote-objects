@@ -30,7 +30,12 @@ export type Criteria<SObject> = {
 
 type RemoteObjectModel<SObject> = {
   get: (field_name: keyof SObject) => any
-  _fields: { [field_name: string]: any }
+  _fields: {
+    [field_name: string]: {
+      type: string
+      shorthand?: string
+    }
+  }
 }
 
 type RemotingEvent = {

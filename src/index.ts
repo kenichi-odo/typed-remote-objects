@@ -77,7 +77,16 @@ class RemoteObjectWrapper<SObject, Extensions> {
           resolve(
             records.map(_ => {
               const props: SObject = {} as SObject
-              Object.keys(_._fields).forEach(field => (props[field] = _.get(field as keyof SObject)))
+              Object.keys(_._fields).forEach(key => {
+                const field = _._fields[key]
+
+                let field_name = key
+                if (field.shorthand != null && field.shorthand !== '') {
+                  field_name = field.shorthand
+                }
+
+                props[field_name] = _.get(key as keyof SObject)
+              })
               return TypedRemoteObjectRecord<SObject, Extensions>({
                 object_name: this.object_name,
                 time_zone_offset: this.time_zone_offset,
