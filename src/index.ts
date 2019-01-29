@@ -40,7 +40,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
     this.remote_object = _s_object_models[object_name]!
   }
 
-  protected retrieve({ criteria }: { criteria: Criteria<SObject> }) {
+  protected _retrieve({ criteria }: { criteria: Criteria<SObject> }) {
     return new Promise(
       (resolve: (_: TRORecord<SObject, Extensions>[]) => void, reject: (_: RemoteObjectError) => void) => {
         if (criteria.where != null) {
@@ -100,11 +100,11 @@ class RemoteObjectWrapper<SObject, Extensions> {
     )
   }
 
-  protected retrieves({ criteria, size }: { criteria: Criteria<SObject>; size?: number }) {
+  protected _retrieves({ criteria, size }: { criteria: Criteria<SObject>; size?: number }) {
     return new Promise(
       async (resolve: (_: TRORecord<SObject, Extensions>[]) => void, reject: (_: RemoteObjectError) => void) => {
         if (criteria.limit != null || criteria.offset != null) {
-          const _ = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
+          const _ = await this._retrieve({ criteria }).catch((_: RemoteObjectError) => _)
           if (_ instanceof RemoteObjectError) {
             reject(_)
             return
@@ -130,7 +130,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
           }
 
           if (offset !== 0) criteria.offset = offset
-          const records = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
+          const records = await this._retrieve({ criteria }).catch((_: RemoteObjectError) => _)
           if (records instanceof RemoteObjectError) {
             reject(records)
             return
@@ -146,7 +146,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
     )
   }
 
-  protected create({ props }: { props: SObject }) {
+  protected _create({ props }: { props: SObject }) {
     return new Promise(
       (resolve: (_: TRORecord<SObject, Extensions>) => void, reject: (_: RemoteObjectError) => void) => {
         Object.keys(props).forEach(_ => {
@@ -164,7 +164,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
             return
           }
 
-          const _ = await this.retrieve({
+          const _ = await this._retrieve({
             criteria: {
               where: { Id: { eq: ids[0] } } as Where<SObject>,
             },
@@ -180,7 +180,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
     )
   }
 
-  protected update({ props }: { props: SObject }) {
+  protected _update({ props }: { props: SObject }) {
     return new Promise(
       (resolve: (_: TRORecord<SObject, Extensions>) => void, reject: (_: RemoteObjectError) => void) => {
         const id = props['Id']
@@ -198,7 +198,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
             return
           }
 
-          const _ = await this.retrieve({
+          const _ = await this._retrieve({
             criteria: {
               where: { Id: { eq: id } } as Where<SObject>,
             },
@@ -214,7 +214,7 @@ class RemoteObjectWrapper<SObject, Extensions> {
     )
   }
 
-  protected delete({ id }: { id: string }) {
+  protected _delete({ id }: { id: string }) {
     return new Promise<void>((resolve: () => void, reject: (_: RemoteObjectError) => void) => {
       this.remote_object.del(id, error => {
         if (error != null) {
@@ -269,7 +269,7 @@ class TRORecordInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject
       props[_ as string] = this[_]
     })
 
-    const _ = await super.update({ props: props as any }).catch((_: RemoteObjectError) => _)
+    const _ = await super._update({ props: props as any }).catch((_: RemoteObjectError) => _)
     if (_ instanceof RemoteObjectError) {
       return Promise.reject(_)
     }
@@ -278,7 +278,7 @@ class TRORecordInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject
   }
 
   async delete() {
-    const _ = await super.delete({ id: this['Id'] }).catch((_: RemoteObjectError) => _)
+    const _ = await super._delete({ id: this['Id'] }).catch((_: RemoteObjectError) => _)
     if (_ instanceof RemoteObjectError) {
       throw _
     }
@@ -429,7 +429,7 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
       criteria.orderby = this._orders
     }
 
-    const _ = await this.retrieve({ criteria }).catch((_: RemoteObjectError) => _)
+    const _ = await super._retrieve({ criteria }).catch((_: RemoteObjectError) => _)
     if (_ instanceof RemoteObjectError) {
       return Promise.reject(_)
     }
@@ -460,7 +460,7 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
       size = this._size
     }
 
-    const _ = await this.retrieves({ criteria, size }).catch((_: RemoteObjectError) => _)
+    const _ = await super._retrieves({ criteria, size }).catch((_: RemoteObjectError) => _)
     if (_ instanceof RemoteObjectError) {
       return Promise.reject(_)
     }
@@ -469,7 +469,7 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
   }
 
   async insert(props: SObject) {
-    const _ = await this.create({ props }).catch((_: RemoteObjectError) => _)
+    const _ = await super._create({ props }).catch((_: RemoteObjectError) => _)
     if (_ instanceof RemoteObjectError) {
       return Promise.reject(_)
     }
@@ -478,7 +478,7 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
   }
 }
 
-const TypedRemoteObjects = <SObject, Extensions = {}>({
+const init = <SObject, Extensions = {}>({
   object_name,
   time_zone_offset,
   extensions,
@@ -490,4 +490,4 @@ const TypedRemoteObjects = <SObject, Extensions = {}>({
   return new TROInstance<SObject, Extensions>(object_name, time_zone_offset, extensions)
 }
 
-export { RemoteObjectError, TRORecord, TypedRemoteObjects }
+export { init, TRORecord, RemoteObjectError }
