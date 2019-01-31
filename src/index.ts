@@ -477,13 +477,21 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
     return _
   }
 
-  async update(props: SObject) {
+  async update(id: string, props: SObject) {
+    ;(props as SObject & { Id: string }).Id = id
     const _ = await super._update({ props }).catch((_: RemoteObjectError) => _)
     if (_ instanceof RemoteObjectError) {
       return Promise.reject(_)
     }
 
     return _
+  }
+
+  async delete(id: string) {
+    const _ = await super._delete({ id }).catch((_: RemoteObjectError) => _)
+    if (_ instanceof RemoteObjectError) {
+      throw _
+    }
   }
 }
 
