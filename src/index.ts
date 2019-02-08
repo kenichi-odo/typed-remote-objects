@@ -336,11 +336,9 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
   }
 
   and(
-    ...wheres: ((
-      _: {
-        where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
-      },
-    ) => void)[]
+    ...wheres: ((_: {
+      where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
+    }) => void)[]
   ) {
     const _ = this.clone()
 
@@ -358,11 +356,9 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
   }
 
   or(
-    ...wheres: ((
-      _: {
-        where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
-      },
-    ) => void)[]
+    ...wheres: ((_: {
+      where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
+    }) => void)[]
   ) {
     const _ = this.clone()
 
@@ -495,7 +491,7 @@ class TROInstance<SObject, Extensions> extends RemoteObjectWrapper<SObject, Exte
   }
 }
 
-const init = <SObject, Extensions = {}>({
+const TypedRemoteObjects = <SObject, Extensions = {}>({
   object_name,
   time_zone_offset,
   extensions,
@@ -507,4 +503,4 @@ const init = <SObject, Extensions = {}>({
   return new TROInstance<SObject, Extensions>(object_name, time_zone_offset, extensions)
 }
 
-export { init, TRORecord, RemoteObjectError }
+export { TypedRemoteObjects, TRORecord, RemoteObjectError }
