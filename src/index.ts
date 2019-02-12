@@ -12,15 +12,17 @@ const isTROError = (_): _ is TROError => {
   return typeof _.name === 'string' && typeof _.message === 'string'
 }
 
+const createTROError = (_: TROError) => _
+
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
-const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObject | TROError => {
+const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObject => {
   const som = _s_object_models[object_name]
   if (som == null) {
     if (SObjectModel[object_name] == null) {
-      return {
+      throw createTROError({
         name: '',
         message: `Object name \`${object_name}\` is unknown. Please check the remote object component definition on Visualforce.`,
-      }
+      })
     }
 
     const som = new SObjectModel[object_name]()
@@ -42,7 +44,7 @@ const _create = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise<TRORecord<SObject, Extensions> | TROError>(resolve => {
+  return new Promise<TRORecord<SObject, Extensions>>((resolve, reject) => {
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
@@ -52,15 +54,9 @@ const _create = <SObject extends object, Extensions>({
       }
     })
 
-    const som = _getSObjectModel({ object_name })
-    if (isTROError(som)) {
-      resolve(som)
-      return
-    }
-
-    som.create(props, async (error, ids) => {
+    _getSObjectModel({ object_name }).create(props, async (error, ids) => {
       if (ids.length === 0) {
-        resolve({ name: error!.name, message: error!.message, attributes: { props } })
+        reject(createTROError({ name: error!.name, message: error!.message, attributes: { props } }))
         return
       }
 
@@ -69,9 +65,9 @@ const _create = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
-      })
+      }).catch((_: TROError) => _)
       if (isTROError(_)) {
-        resolve(_)
+        reject(_)
         return
       }
 
@@ -91,7 +87,7 @@ const _update = <SObject extends object, Extensions>({
   extensions: Extensions
   props: SObject
 }) => {
-  return new Promise<TRORecord<SObject, Extensions> | TROError>(resolve => {
+  return new Promise<TRORecord<SObject, Extensions>>((resolve, reject) => {
     const id = props['Id']
     Object.keys(props).forEach(_ => {
       const p = props[_]
@@ -102,15 +98,9 @@ const _update = <SObject extends object, Extensions>({
       }
     })
 
-    const som = _getSObjectModel({ object_name })
-    if (isTROError(som)) {
-      resolve(som)
-      return
-    }
-
-    som.update([id], props, async error => {
+    _getSObjectModel({ object_name }).update([id], props, async error => {
       if (error != null) {
-        resolve({ name: error.name, message: error.message, attributes: { props } })
+        reject(createTROError({ name: error.name, message: error.message, attributes: { props } }))
         return
       }
 
@@ -119,9 +109,9 @@ const _update = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: id } } as Where<SObject> },
-      })
+      }).catch((_: TROError) => _)
       if (isTROError(_)) {
-        resolve(_)
+        reject(_)
         return
       }
 
@@ -131,16 +121,10 @@ const _update = <SObject extends object, Extensions>({
 }
 
 const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
-  return new Promise<void | TROError>(resolve => {
-    const som = _getSObjectModel({ object_name })
-    if (isTROError(som)) {
-      resolve(som)
-      return
-    }
-
-    som.del(id, error => {
+  return new Promise<void>((resolve, reject) => {
+    _getSObjectModel({ object_name }).del(id, error => {
       if (error != null) {
-        resolve({ name: error.name, message: error.message, attributes: { id } })
+        reject(createTROError({ name: error.name, message: error.message, attributes: { id } }))
         return
       }
 
@@ -160,7 +144,7 @@ const _retrieve = <SObject extends object, Extensions>({
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
-  return new Promise<TRORecord<SObject, Extensions>[] | TROError>(resolve => {
+  return new Promise<TRORecord<SObject, Extensions>[]>((resolve, reject) => {
     if (criteria.where != null) {
       Object.keys(criteria.where).forEach(_ => {
         const w = criteria.where![_]
@@ -186,15 +170,9 @@ const _retrieve = <SObject extends object, Extensions>({
       })
     }
 
-    const som = _getSObjectModel({ object_name })
-    if (isTROError(som)) {
-      resolve(som)
-      return
-    }
-
-    som.retrieve<SObject>(criteria, (error, records) => {
+    _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
       if (error != null) {
-        resolve({ name: error.name, message: error.message, attributes: { criteria } })
+        reject(createTROError({ name: error.name, message: error.message, attributes: { criteria } }))
         return
       }
 
@@ -261,11 +239,11 @@ const _retrieves = <SObject extends object, Extensions>({
   criteria: Criteria<SObject>
   size?: number
 }) => {
-  return new Promise<TRORecord<SObject, Extensions>[] | TROError>(async resolve => {
+  return new Promise<TRORecord<SObject, Extensions>[]>(async (resolve, reject) => {
     if (criteria.limit != null || criteria.offset != null) {
-      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria })
+      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: TROError) => _)
       if (isTROError(_)) {
-        resolve(_)
+        reject(_)
         return
       }
 
@@ -292,9 +270,9 @@ const _retrieves = <SObject extends object, Extensions>({
         criteria.offset = offset
       }
 
-      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria })
+      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: TROError) => _)
       if (isTROError(records)) {
-        resolve(records)
+        reject(records)
         return
       }
 
@@ -415,9 +393,9 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         time_zone_offset,
         extensions,
         criteria,
-      })
+      }).catch((_: TROError) => _)
       if (isTROError(_)) {
-        return _
+        return Promise.reject(_)
       }
 
       return _.length === 0 ? null : _[0]

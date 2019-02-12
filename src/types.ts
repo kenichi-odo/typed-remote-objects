@@ -10,8 +10,8 @@ export type TRORecordInstance<SObject, Extensions> = {
     field_name_: Field,
     value_: SObject[Field],
   ): Readonly<SObject> & TRORecordInstance<SObject, Extensions>
-  update(): Promise<TRORecord<SObject, Extensions> | TROError>
-  delete(): Promise<void | TROError>
+  update(): Promise<TRORecord<SObject, Extensions>>
+  delete(): Promise<void>
   toObject(): SObject
 }
 
@@ -40,11 +40,11 @@ export type TROInstance<SObject, Extensions> = {
   limit(size: number): TROInstance<SObject, Extensions>
   offset(size: number): TROInstance<SObject, Extensions>
   size(size: number): TROInstance<SObject, Extensions>
-  one(): Promise<TRORecord<SObject, Extensions> | null | TROError>
-  all(): Promise<(TRORecord<SObject, Extensions>)[] | TROError>
-  insert(props: SObject): Promise<TRORecord<SObject, Extensions> | TROError>
-  update(id: string, props: SObject): Promise<TRORecord<SObject, Extensions> | TROError>
-  delete(id: string): Promise<void | TROError>
+  one(): Promise<TRORecord<SObject, Extensions> | null>
+  all(): Promise<(TRORecord<SObject, Extensions>)[]>
+  insert(props: SObject): Promise<TRORecord<SObject, Extensions>>
+  update(id: string, props: SObject): Promise<TRORecord<SObject, Extensions>>
+  delete(id: string): Promise<void>
 }
 
 export type TROError = { name: string; message: string; attributes?: unknown }
