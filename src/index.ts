@@ -9,6 +9,10 @@ import { TROInstance, TRORecord, TRORecordInstance, TROError } from './types'
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
 
 const isTROError = (_): _ is TROError => {
+  if (_ == null) {
+    return false
+  }
+
   return typeof _.name === 'string' && typeof _.message === 'string'
 }
 
@@ -20,7 +24,7 @@ const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObjec
   if (som == null) {
     if (SObjectModel[object_name] == null) {
       throw createTROError({
-        name: '',
+        name: 'Object not found',
         message: `Object name \`${object_name}\` is unknown. Please check the remote object component definition on Visualforce.`,
       })
     }
