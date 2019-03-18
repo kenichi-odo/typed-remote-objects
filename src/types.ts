@@ -1,9 +1,5 @@
 import { Where, Order, WhereCondition, OrderType } from './s-object-model'
 
-export type TRORecord<SObject, Extensions = {}> = Readonly<SObject> &
-  TRORecordInstance<SObject, Extensions> &
-  Extensions
-
 export type TRORecordInstance<SObject, Extensions> = {
   _update_fields: (keyof SObject)[]
   set<Field extends keyof SObject>(
@@ -14,6 +10,10 @@ export type TRORecordInstance<SObject, Extensions> = {
   delete(): Promise<void>
   toObject(): SObject
 }
+
+export type TRORecord<SObject, Extensions = {}> = Readonly<SObject> &
+  TRORecordInstance<SObject, Extensions> &
+  Extensions
 
 export type TROInstance<SObject, Extensions> = {
   _wheres: Where<SObject>
@@ -46,5 +46,3 @@ export type TROInstance<SObject, Extensions> = {
   update(id: string, props: SObject): Promise<TRORecord<SObject, Extensions>>
   delete(id: string): Promise<void>
 }
-
-export type TROError = { name: string; message: string; attributes?: unknown }

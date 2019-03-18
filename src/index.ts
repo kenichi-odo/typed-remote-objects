@@ -1,30 +1,34 @@
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
-const Deepmerge: {
-  <T1, T2>(x: Partial<T1>, y: Partial<T2>): T1 & T2
-  all
-} = require('deepmerge')
+import Deepmerge from 'deepmerge'
+import { CustomError } from 'ts-custom-error'
 
-import { TROInstance, TRORecord, TRORecordInstance, TROError } from './types'
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
+import { TRORecord, TRORecordInstance, TROInstance } from './types'
+export { TRORecord }
 
-const isTROError = (_): _ is TROError => {
-  if (_ == null) {
-    return false
+export class TROError extends CustomError {
+  parameters?: object
+
+  constructor(name: string, message: string, parameters?: object) {
+    super(message)
+
+    this.name = name
+    this.parameters = parameters
   }
-
-  return typeof _.name === 'string' && typeof _.message === 'string'
 }
 
-const createTROError = (_: TROError) => _
+const troErrorFactory = ({ name, message, parameters }: { name: string; message: string; parameters?: object }) => {
+  return new TROError(name, message, parameters)
+}
 
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
 const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObject => {
   const som = _s_object_models[object_name]
   if (som == null) {
     if (SObjectModel[object_name] == null) {
-      throw createTROError({
-        name: 'Object not found',
+      throw troErrorFactory({
+        name: 'ReferenceError',
         message: `Object name \`${object_name}\` is unknown. Please check the remote object component definition on Visualforce.`,
       })
     }
@@ -60,7 +64,13 @@ const _create = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).create(props, async (error, ids) => {
       if (ids.length === 0) {
-        reject(createTROError({ name: error!.name, message: error!.message, attributes: { props } }))
+        reject(
+          troErrorFactory({
+            name: error!.name,
+            message: error!.message,
+            parameters: { props },
+          }),
+        )
         return
       }
 
@@ -69,8 +79,8 @@ const _create = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
-      }).catch((_: TROError) => _)
-      if (isTROError(_)) {
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
         reject(_)
         return
       }
@@ -104,7 +114,13 @@ const _update = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).update([id], props, async error => {
       if (error != null) {
-        reject(createTROError({ name: error.name, message: error.message, attributes: { props } }))
+        reject(
+          troErrorFactory({
+            name: error.name,
+            message: error.message,
+            parameters: { props },
+          }),
+        )
         return
       }
 
@@ -113,8 +129,8 @@ const _update = <SObject extends object, Extensions>({
         time_zone_offset,
         extensions,
         criteria: { where: { Id: { eq: id } } as Where<SObject> },
-      }).catch((_: TROError) => _)
-      if (isTROError(_)) {
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
         reject(_)
         return
       }
@@ -128,7 +144,13 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
   return new Promise<void>((resolve, reject) => {
     _getSObjectModel({ object_name }).del(id, error => {
       if (error != null) {
-        reject(createTROError({ name: error.name, message: error.message, attributes: { id } }))
+        reject(
+          troErrorFactory({
+            name: error.name,
+            message: error.message,
+            parameters: { id },
+          }),
+        )
         return
       }
 
@@ -176,7 +198,13 @@ const _retrieve = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
       if (error != null) {
-        reject(createTROError({ name: error.name, message: error.message, attributes: { criteria } }))
+        reject(
+          troErrorFactory({
+            name: error.name,
+            message: error.message,
+            parameters: { criteria },
+          }),
+        )
         return
       }
 
@@ -196,7 +224,12 @@ const _retrieve = <SObject extends object, Extensions>({
                 ops[_ as string] = this[_]
               })
 
-              return await _update({ object_name, time_zone_offset, extensions, props: ops })
+              return await _update({
+                object_name,
+                time_zone_offset,
+                extensions,
+                props: ops,
+              })
             },
             async delete() {
               return await _delete({ object_name, id: this['Id'] })
@@ -223,7 +256,7 @@ const _retrieve = <SObject extends object, Extensions>({
             tro_record_instance[field_name] = _.get(key as keyof SObject)
           })
 
-          return Deepmerge.all([{}, tro_record_instance, extensions])
+          return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<SObject, Extensions>
         }),
       )
     })
@@ -245,8 +278,13 @@ const _retrieves = <SObject extends object, Extensions>({
 }) => {
   return new Promise<TRORecord<SObject, Extensions>[]>(async (resolve, reject) => {
     if (criteria.limit != null || criteria.offset != null) {
-      const _ = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: TROError) => _)
-      if (isTROError(_)) {
+      const _ = await _retrieve({
+        object_name,
+        time_zone_offset,
+        extensions,
+        criteria,
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
         reject(_)
         return
       }
@@ -274,8 +312,13 @@ const _retrieves = <SObject extends object, Extensions>({
         criteria.offset = offset
       }
 
-      const records = await _retrieve({ object_name, time_zone_offset, extensions, criteria }).catch((_: TROError) => _)
-      if (isTROError(records)) {
+      const records = await _retrieve({
+        object_name,
+        time_zone_offset,
+        extensions,
+        criteria,
+      }).catch((_: Error) => _)
+      if (records instanceof Error) {
         reject(records)
         return
       }
@@ -397,8 +440,8 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         time_zone_offset,
         extensions,
         criteria,
-      }).catch((_: TROError) => _)
-      if (isTROError(_)) {
+      }).catch((_: Error) => _)
+      if (_ instanceof Error) {
         return Promise.reject(_)
       }
 
@@ -436,11 +479,21 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       })
     },
     async insert(props) {
-      return await _create({ object_name, time_zone_offset, extensions, props })
+      return await _create({
+        object_name,
+        time_zone_offset,
+        extensions,
+        props,
+      })
     },
     async update(id, props) {
       ;(props as SObject & { Id: string }).Id = id
-      return await _update({ object_name, time_zone_offset, extensions, props })
+      return await _update({
+        object_name,
+        time_zone_offset,
+        extensions,
+        props,
+      })
     },
     async delete(id) {
       return await _delete({ object_name, id })
@@ -449,4 +502,3 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
 }
 
 export default TypedRemoteObjects
-export { TRORecord, isTROError }

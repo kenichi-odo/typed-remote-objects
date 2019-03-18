@@ -28,7 +28,7 @@ export type Criteria<SObject> = {
   offset?: number
 }
 
-type RemoteObjectModel<SObject> = {
+export type RemoteObjectRecord<SObject> = {
   get: (field_name: keyof SObject) => any
   _fields: {
     [field_name: string]: {
@@ -52,7 +52,7 @@ type RemotingEvent = {
 export type RemoteObject = {
   retrieve<SObject>(
     criteria: Criteria<SObject>,
-    result: (error: Error | null, records: RemoteObjectModel<SObject>[]) => void,
+    result: (error: Error | null, records: RemoteObjectRecord<SObject>[]) => void,
   ): void
   create(
     props: { [field_name: string]: any },

@@ -8,10 +8,11 @@
     "@types/webpack": "^4.4.25",
     "babel-loader": "^8.0.5",
     "deepmerge": "^3.2.0",
+    "ts-custom-error": "^3.0.0",
     "ts-loader": "^5.3.3",
     "typescript": "^3.3.3333",
-    "webpack": "^4.29.5",
-    "webpack-cli": "^3.2.3"
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0"
   },
   "files": [
     "lib",
@@ -39,10 +40,9 @@
     "url": "https://github.com/kenichi-odo/typed-remote-objects.git"
   },
   "scripts": {
-    "_deps:clean": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && yarn",
-    "_deps:update": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && ncu -a && yarn",
-    "build": "webpack --progress --hide-modules"
+    "build": "webpack --progress --hide-modules",
+    "deps:clean": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && yarn"
   },
   "types": "./lib/types/index.d.ts",
-  "version": "2.0.0-beta.22"
+  "version": "2.0.0-beta.28"
 }

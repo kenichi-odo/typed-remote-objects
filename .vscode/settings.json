@@ -1,0 +1,35 @@
+{
+  "[markdown]": {
+    "editor.quickSuggestions": {
+      "comments": true,
+      "other": true,
+      "strings": true
+    },
+    "editor.wordWrap": "off",
+    "files.trimTrailingWhitespace": false
+  },
+  "diffEditor.ignoreTrimWhitespace": false,
+  "editor.detectIndentation": false,
+  "editor.quickSuggestions": {
+    "comments": true,
+    "other": true,
+    "strings": true
+  },
+  "editor.renderControlCharacters": true,
+  "editor.renderLineHighlight": "all",
+  "editor.smoothScrolling": true,
+  "editor.tabSize": 2,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "javascript.referencesCodeLens.enabled": true,
+  "liveshare.languages.allowGuestCommandControl": true,
+  "scm.alwaysShowProviders": true,
+  "terminal.integrated.scrollback": 10240,
+  "typescript.implementationsCodeLens.enabled": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "workbench.commandPalette.preserveInput": true,
+  "workbench.settings.editor": "json",
+  "workbench.settings.useSplitJSON": true,
+  "workbench.statusBar.feedback.visible": false,
+  "workbench.tips.enabled": false
+}
