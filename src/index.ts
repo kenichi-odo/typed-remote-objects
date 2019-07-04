@@ -1,25 +1,13 @@
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
 import Deepmerge from 'deepmerge'
-import { CustomError } from 'ts-custom-error'
 
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
 import { TRORecord, TRORecordInstance, TROInstance } from './types'
 export { TRORecord }
 
-export class TROError extends CustomError {
-  parameters?: object
-
-  constructor(name: string, message: string, parameters?: object) {
-    super(message)
-
-    this.name = name
-    this.parameters = parameters
-  }
-}
-
-const troErrorFactory = ({ name, message, parameters }: { name: string; message: string; parameters?: object }) => {
-  return new TROError(name, message, parameters)
+const troErrorFactory = (_: { name: string; message: string; attributes?: object }) => {
+  return new Error(JSON.stringify(_))
 }
 
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
@@ -68,7 +56,7 @@ const _create = <SObject extends object, Extensions>({
           troErrorFactory({
             name: error!.name,
             message: error!.message,
-            parameters: { props },
+            attributes: { props },
           }),
         )
         return
@@ -118,7 +106,7 @@ const _update = <SObject extends object, Extensions>({
           troErrorFactory({
             name: error.name,
             message: error.message,
-            parameters: { props },
+            attributes: { props },
           }),
         )
         return
@@ -148,7 +136,7 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
           troErrorFactory({
             name: error.name,
             message: error.message,
-            parameters: { id },
+            attributes: { id },
           }),
         )
         return
@@ -202,7 +190,7 @@ const _retrieve = <SObject extends object, Extensions>({
           troErrorFactory({
             name: error.name,
             message: error.message,
-            parameters: { criteria },
+            attributes: { criteria },
           }),
         )
         return
