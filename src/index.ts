@@ -8,8 +8,12 @@ import { TRORecord, TRORecordInstance, TROInstance } from './types'
 export { TRORecord }
 
 export class TROError extends CustomError {
-  constructor(public name: string, message: string, public attributes?: object) {
+  name: string
+
+  constructor(name: string, message: string, public attributes?: object) {
     super(message)
+
+    this.name = name
   }
 }
 
