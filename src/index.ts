@@ -1,13 +1,20 @@
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
 import Deepmerge from 'deepmerge'
+import { CustomError } from 'ts-custom-error'
 
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
 import { TRORecord, TRORecordInstance, TROInstance } from './types'
 export { TRORecord }
 
+export class TROError extends CustomError {
+  constructor(public name: string, message: string, public attributes?: object) {
+    super(message)
+  }
+}
+
 const troErrorFactory = (_: { name: string; message: string; attributes?: object }) => {
-  return new Error(JSON.stringify(_))
+  return new TROError(_.name, _.message, _.attributes)
 }
 
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
