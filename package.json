@@ -3,16 +3,16 @@
   "description": "A Visualforce remote objects that is type safe and immutable and resembles an active record.",
   "devDependencies": {
     "@babel/core": "^7.5.0",
-    "@babel/preset-env": "^7.5.0",
+    "@babel/preset-env": "^7.5.2",
     "@types/webpack": "^4.4.34",
     "babel-loader": "^8.0.6",
     "core-js": "^3.1.4",
-    "deepmerge": "^3.3.0",
+    "deepmerge": "^4.0.0",
     "regenerator-runtime": "^0.13.2",
     "ts-custom-error": "^3.1.1",
     "ts-loader": "^6.0.4",
-    "typescript": "^3.5.2",
-    "webpack": "^4.35.2",
+    "typescript": "^3.5.3",
+    "webpack": "^4.35.3",
     "webpack-cli": "^3.3.5"
   },
   "files": [
@@ -45,5 +45,5 @@
     "deps:clean": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && yarn"
   },
   "types": "./lib/types/index.d.ts",
-  "version": "2.0.0-beta.42"
+  "version": "2.0.0-beta.43"
 }

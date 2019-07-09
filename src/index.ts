@@ -48,7 +48,7 @@ const _create = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  hookExecute?: (execute: () => Promise<void>) => Promise<void>
+  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
 }) => {
@@ -94,7 +94,7 @@ const _update = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  hookExecute?: (execute: () => Promise<void>) => Promise<void>
+  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
 }) => {
@@ -154,7 +154,7 @@ const _retrieve = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  hookExecute?: (execute: () => Promise<void>) => Promise<void>
+  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
@@ -218,7 +218,7 @@ const _retrieve = <SObject extends object, Extensions>({
               }
 
               let _!: TRORecord<SObject, Extensions>
-              hookExecute(async () => {
+              hookExecute('update', async () => {
                 _ = await _update(ps)
               })
               return _
@@ -230,7 +230,7 @@ const _retrieve = <SObject extends object, Extensions>({
                 return
               }
 
-              hookExecute(async () => {
+              hookExecute('delete', async () => {
                 await _delete(ps)
               })
             },
@@ -273,7 +273,7 @@ const _retrieves = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  hookExecute?: (execute: () => Promise<void>) => Promise<void>
+  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
   size?: number
@@ -347,7 +347,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
 }: {
   object_name: string
   time_zone_offset: number
-  hookExecute?: (execute: () => Promise<void>) => Promise<void>
+  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions?: Extensions
 }): TROInstance<SObject, Extensions> => {
   return {
@@ -493,7 +493,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       }
 
       let _!: TRORecord<SObject, Extensions>
-      await hookExecute(async () => {
+      await hookExecute('insert', async () => {
         _ = await _create(ps)
       })
       return _
@@ -513,7 +513,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       }
 
       let _!: TRORecord<SObject, Extensions>
-      await hookExecute(async () => {
+      await hookExecute('update', async () => {
         _ = await _update(ps)
       })
       return _
@@ -525,7 +525,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         return
       }
 
-      await hookExecute(async () => {
+      await hookExecute('delete', async () => {
         await _delete(ps)
       })
     },
