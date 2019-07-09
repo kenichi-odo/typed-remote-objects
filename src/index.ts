@@ -42,11 +42,13 @@ const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObjec
 const _create = <SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
+  hookExecute,
   extensions,
   props,
 }: {
   object_name: string
   time_zone_offset: number
+  hookExecute?: (execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
 }) => {
@@ -69,6 +71,7 @@ const _create = <SObject extends object, Extensions>({
       const _ = await _retrieve<SObject, Extensions>({
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
       }).catch((_: Error) => _)
@@ -85,11 +88,13 @@ const _create = <SObject extends object, Extensions>({
 const _update = <SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
+  hookExecute,
   extensions,
   props,
 }: {
   object_name: string
   time_zone_offset: number
+  hookExecute?: (execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
 }) => {
@@ -113,6 +118,7 @@ const _update = <SObject extends object, Extensions>({
       const _ = await _retrieve<SObject, Extensions>({
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         criteria: { where: { Id: { eq: id } } as Where<SObject> },
       }).catch((_: Error) => _)
@@ -142,11 +148,13 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
 const _retrieve = <SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
+  hookExecute,
   extensions,
   criteria,
 }: {
   object_name: string
   time_zone_offset: number
+  hookExecute?: (execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
@@ -198,15 +206,33 @@ const _retrieve = <SObject extends object, Extensions>({
                 ops[_ as string] = this[_]
               })
 
-              return await _update({
+              const ps = {
                 object_name,
                 time_zone_offset,
+                hookExecute,
                 extensions,
                 props: ops,
+              }
+              if (hookExecute == null) {
+                return await _update(ps)
+              }
+
+              let _!: TRORecord<SObject, Extensions>
+              hookExecute(async () => {
+                _ = await _update(ps)
               })
+              return _
             },
             async delete() {
-              return await _delete({ object_name, id: this['Id'] })
+              const ps = { object_name, id: this['Id'] }
+              if (hookExecute == null) {
+                await _delete(ps)
+                return
+              }
+
+              hookExecute(async () => {
+                await _delete(ps)
+              })
             },
             toObject() {
               const _ = Deepmerge({}, this)
@@ -240,12 +266,14 @@ const _retrieve = <SObject extends object, Extensions>({
 const _retrieves = <SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
+  hookExecute,
   extensions,
   criteria,
   size,
 }: {
   object_name: string
   time_zone_offset: number
+  hookExecute?: (execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
   size?: number
@@ -255,6 +283,7 @@ const _retrieves = <SObject extends object, Extensions>({
       const _ = await _retrieve({
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         criteria,
       }).catch((_: Error) => _)
@@ -289,6 +318,7 @@ const _retrieves = <SObject extends object, Extensions>({
       const records = await _retrieve({
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         criteria,
       }).catch((_: Error) => _)
@@ -312,10 +342,12 @@ const _retrieves = <SObject extends object, Extensions>({
 const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
   object_name,
   time_zone_offset,
+  hookExecute,
   extensions = {} as Extensions,
 }: {
   object_name: string
   time_zone_offset: number
+  hookExecute?: (execute: () => Promise<void>) => Promise<void>
   extensions?: Extensions
 }): TROInstance<SObject, Extensions> => {
   return {
@@ -412,6 +444,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       const _ = await _retrieve<SObject, Extensions>({
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         criteria,
       }).catch((_: Error) => _)
@@ -447,30 +480,54 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       return await _retrieves<SObject, Extensions>({
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         criteria,
         size,
       })
     },
     async insert(props) {
-      return await _create({
-        object_name,
-        time_zone_offset,
-        extensions,
-        props,
+      const ps = { object_name, time_zone_offset, hookExecute, extensions, props }
+      if (hookExecute == null) {
+        return await _create(ps)
+      }
+
+      let _!: TRORecord<SObject, Extensions>
+      await hookExecute(async () => {
+        _ = await _create(ps)
       })
+      return _
     },
     async update(id, props) {
       ;(props as SObject & { Id: string }).Id = id
-      return await _update({
+      const ps = {
         object_name,
         time_zone_offset,
+        hookExecute,
         extensions,
         props,
+      }
+
+      if (hookExecute == null) {
+        return await _update(ps)
+      }
+
+      let _!: TRORecord<SObject, Extensions>
+      await hookExecute(async () => {
+        _ = await _update(ps)
       })
+      return _
     },
     async delete(id) {
-      return await _delete({ object_name, id })
+      const ps = { object_name, id }
+      if (hookExecute == null) {
+        await _delete(ps)
+        return
+      }
+
+      await hookExecute(async () => {
+        await _delete(ps)
+      })
     },
   }
 }
