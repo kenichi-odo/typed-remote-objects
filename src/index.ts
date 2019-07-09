@@ -11,6 +11,10 @@ export class TROError extends CustomError {
   constructor(message: string, public attributes?: object) {
     super(message)
   }
+
+  toObject() {
+    return { name: this.name, message: this.message, attributes: this.attributes }
+  }
 }
 
 const troErrorFactory = (_: { message: string; attributes?: object }) => {
