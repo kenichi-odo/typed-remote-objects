@@ -8,17 +8,17 @@ import { TRORecord, TRORecordInstance, TROInstance } from './types'
 export { TRORecord }
 
 export class TROError extends CustomError {
-  constructor(message: string, public attributes?: object) {
+  constructor(public object_name: string, message: string, public attributes?: object) {
     super(message)
   }
 
   toObject() {
-    return { name: this.name, message: this.message, attributes: this.attributes }
+    return { object_name: this.object_name, name: this.name, message: this.message, attributes: this.attributes }
   }
 }
 
-const troErrorFactory = (_: { message: string; attributes?: object }) => {
-  return new TROError(_.message, _.attributes)
+const troErrorFactory = (_: { object_name: string; message: string; attributes?: object }) => {
+  return new TROError(_.object_name, _.message, _.attributes)
 }
 
 const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
@@ -27,6 +27,7 @@ const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObjec
   if (som == null) {
     if (SObjectModel[object_name] == null) {
       throw troErrorFactory({
+        object_name,
         message: `Object name \`${object_name}\` is unknown. Please check the remote object component definition on Visualforce.`,
       })
     }
@@ -64,7 +65,7 @@ const _create = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).create(props, async (error, ids) => {
       if (ids.length === 0) {
-        reject(troErrorFactory({ message: error!.message, attributes: { props } }))
+        reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
         return
       }
 
@@ -111,7 +112,7 @@ const _update = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).update([id], props, async error => {
       if (error != null) {
-        reject(troErrorFactory({ message: error.message, attributes: { props } }))
+        reject(troErrorFactory({ object_name, message: error.message, attributes: { props } }))
         return
       }
 
@@ -136,7 +137,7 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
   return new Promise<void>((resolve, reject) => {
     _getSObjectModel({ object_name }).del(id, error => {
       if (error != null) {
-        reject(troErrorFactory({ message: error.message, attributes: { id } }))
+        reject(troErrorFactory({ object_name, message: error.message, attributes: { id } }))
         return
       }
 
@@ -186,7 +187,7 @@ const _retrieve = <SObject extends object, Extensions>({
 
     _getSObjectModel({ object_name }).retrieve<SObject>(criteria, (error, records) => {
       if (error != null) {
-        reject(troErrorFactory({ message: error.message, attributes: { criteria } }))
+        reject(troErrorFactory({ object_name, message: error.message, attributes: { criteria } }))
         return
       }
 
