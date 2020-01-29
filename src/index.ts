@@ -71,7 +71,7 @@ const _create = <SObject extends object, Extensions>({
         return
       }
 
-      if (options == null || !options.fetch) {
+      if (options != null && !options.fetch) {
         resolve()
         return
       }
@@ -125,7 +125,7 @@ const _update = <SObject extends object, Extensions>({
         return
       }
 
-      if (options == null || !options.fetch) {
+      if (options != null && !options.fetch) {
         resolve()
         return
       }
