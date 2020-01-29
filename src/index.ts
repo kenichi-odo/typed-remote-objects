@@ -4,7 +4,7 @@ import Deepmerge from 'deepmerge'
 import { CustomError } from 'ts-custom-error'
 
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
-import { TRORecord, TRORecordInstance, TROInstance } from './types'
+import { TRORecord, TRORecordInstance, TROInstance, UpsertOptions } from './types'
 export { TRORecord }
 
 export class TROError extends CustomError {
@@ -21,7 +21,7 @@ const troErrorFactory = (_: { object_name: string; message: string; attributes?:
   return new TROError(_.object_name, _.message, _.attributes)
 }
 
-const _s_object_models: { [object_name: string]: RemoteObject | null } = {}
+const _s_object_models: { [object_name: string]: RemoteObject | undefined } = {}
 const _getSObjectModel = ({ object_name }: { object_name: string }): RemoteObject => {
   const som = _s_object_models[object_name]
   if (som == null) {
@@ -46,14 +46,16 @@ const _create = <SObject extends object, Extensions>({
   hookExecute,
   extensions,
   props,
+  options,
 }: {
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
+  options?: UpsertOptions
 }) => {
-  return new Promise<TRORecord<SObject, Extensions>>((resolve, reject) => {
+  return new Promise<TRORecord<SObject, Extensions> | undefined>((resolve, reject) => {
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
@@ -66,6 +68,11 @@ const _create = <SObject extends object, Extensions>({
     _getSObjectModel({ object_name }).create(props, async (error, ids) => {
       if (ids.length === 0) {
         reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
+        return
+      }
+
+      if (options == null || !options.fetch) {
+        resolve()
         return
       }
 
@@ -92,14 +99,16 @@ const _update = <SObject extends object, Extensions>({
   hookExecute,
   extensions,
   props,
+  options,
 }: {
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
+  options?: UpsertOptions
 }) => {
-  return new Promise<TRORecord<SObject, Extensions>>((resolve, reject) => {
+  return new Promise<TRORecord<SObject, Extensions> | undefined>((resolve, reject) => {
     const id = props['Id']
     Object.keys(props).forEach(_ => {
       const p = props[_]
@@ -113,6 +122,11 @@ const _update = <SObject extends object, Extensions>({
     _getSObjectModel({ object_name }).update([id], props, async error => {
       if (error != null) {
         reject(troErrorFactory({ object_name, message: error.message, attributes: { props } }))
+        return
+      }
+
+      if (options == null || !options.fetch) {
+        resolve()
         return
       }
 
@@ -192,16 +206,16 @@ const _retrieve = <SObject extends object, Extensions>({
       }
 
       resolve(
-        records.map(_ => {
+        records.map(record => {
           const tro_record_instance: Readonly<SObject> & TRORecordInstance<SObject, Extensions> = {
             _update_fields: [] as (keyof SObject)[],
-            set(fn_, v_) {
+            set(fn, v) {
               const _ = Deepmerge({}, this)
-              _[fn_ as string] = v_
-              _._update_fields.push(fn_)
+              _[fn as string] = v
+              _._update_fields.push(fn)
               return _
             },
-            async update() {
+            async update(options) {
               const ops = { Id: this['Id'] } as SObject
               this._update_fields.forEach(_ => {
                 ops[_ as string] = this[_]
@@ -213,12 +227,13 @@ const _retrieve = <SObject extends object, Extensions>({
                 hookExecute,
                 extensions,
                 props: ops,
+                options,
               }
               if (hookExecute == null) {
                 return await _update(ps)
               }
 
-              let _!: TRORecord<SObject, Extensions>
+              let _: TRORecord<SObject, Extensions> | undefined
               hookExecute('update', async () => {
                 _ = await _update(ps)
               })
@@ -246,15 +261,15 @@ const _retrieve = <SObject extends object, Extensions>({
             },
           } as Readonly<SObject> & TRORecordInstance<SObject, Extensions>
 
-          Object.keys(_._fields).forEach(key => {
-            const field = _._fields[key]
+          Object.keys(record._fields).forEach(key => {
+            const field = record._fields[key]
 
             let field_name = key
             if (field.shorthand != null && field.shorthand !== '') {
               field_name = field.shorthand
             }
 
-            tro_record_instance[field_name] = _.get(key as keyof SObject)
+            tro_record_instance[field_name] = record.get(key as keyof SObject)
           })
 
           return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<SObject, Extensions>
@@ -354,9 +369,9 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
   return {
     _wheres: {} as Where<SObject>,
     _orders: [],
-    _limit: null,
-    _offset: null,
-    _size: null,
+    _limit: undefined,
+    _offset: undefined,
+    _size: undefined,
     where(field, condition) {
       const _ = Deepmerge({}, this)
       _._wheres[field as string] = condition
@@ -453,7 +468,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         return Promise.reject(_)
       }
 
-      return _.length === 0 ? null : _[0]
+      return _.length === 0 ? undefined : _[0]
     },
     async all() {
       const criteria: Criteria<SObject> = {}
@@ -465,18 +480,8 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         criteria.orderby = this._orders
       }
 
-      if (this._limit != null) {
-        criteria.limit = this._limit
-      }
-
-      if (this._offset != null) {
-        criteria.offset = this._offset
-      }
-
-      let size: number | undefined
-      if (this._size != null) {
-        size = this._size
-      }
+      criteria.limit = this._limit
+      criteria.offset = this._offset
 
       return await _retrieves<SObject, Extensions>({
         object_name,
@@ -484,22 +489,22 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         hookExecute,
         extensions,
         criteria,
-        size,
+        size: this._size,
       })
     },
-    async insert(props) {
-      const ps = { object_name, time_zone_offset, hookExecute, extensions, props }
+    async insert(props, options) {
+      const ps = { object_name, time_zone_offset, hookExecute, extensions, props, options }
       if (hookExecute == null) {
         return await _create(ps)
       }
 
-      let _!: TRORecord<SObject, Extensions>
+      let _!: TRORecord<SObject, Extensions> | undefined
       await hookExecute('insert', async () => {
         _ = await _create(ps)
       })
       return _
     },
-    async update(id, props) {
+    async update(id, props, options) {
       ;(props as SObject & { Id: string }).Id = id
       const ps = {
         object_name,
@@ -507,13 +512,14 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         hookExecute,
         extensions,
         props,
+        options,
       }
 
       if (hookExecute == null) {
         return await _update(ps)
       }
 
-      let _!: TRORecord<SObject, Extensions>
+      let _!: TRORecord<SObject, Extensions> | undefined
       await hookExecute('update', async () => {
         _ = await _update(ps)
       })

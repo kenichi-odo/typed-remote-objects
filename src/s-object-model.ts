@@ -52,16 +52,16 @@ type RemotingEvent = {
 export type RemoteObject = {
   retrieve<SObject>(
     criteria: Criteria<SObject>,
-    result: (error: Error | null, records: RemoteObjectRecord<SObject>[]) => void,
+    result: (error: Error | undefined, records: RemoteObjectRecord<SObject>[]) => void,
   ): void
   create(
     props: { [field_name: string]: any },
-    result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void,
+    result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
   ): void
   update(
     ids: string[],
     props: { [field_name: string]: any },
-    result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void,
+    result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
   ): void
-  del(id: string, result: (error: Error | null, affected_ids: string[], event: RemotingEvent) => void): void
+  del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void): void
 }
