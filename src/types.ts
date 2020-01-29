@@ -46,7 +46,7 @@ export type TROInstance<SObject, Extensions> = {
   size(size: number): TROInstance<SObject, Extensions>
   one(): Promise<TRORecord<SObject, Extensions> | undefined>
   all(): Promise<TRORecord<SObject, Extensions>[]>
-  insert(props: SObject, options: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
+  insert(props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
   update(id: string, props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
   delete(id: string): Promise<void>
 }

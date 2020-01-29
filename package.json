@@ -53,5 +53,5 @@
     "deps:clean": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && yarn"
   },
   "types": "./lib/types/index.d.ts",
-  "version": "2.0.0-beta.46"
+  "version": "2.0.0-beta.47"
 }
