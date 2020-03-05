@@ -316,8 +316,8 @@ const _retrieves = <SObject extends object, Extensions>({
       size = 2000
     }
 
-    let results: TRORecord<SObject, Extensions>[] = []
     let offset = 0
+    const promises: Promise<TRORecord<SObject, Extensions>[]>[] = []
     while (size > 0) {
       if (size > 100) {
         criteria.limit = 100
@@ -331,27 +331,26 @@ const _retrieves = <SObject extends object, Extensions>({
         criteria.offset = offset
       }
 
-      const records = await _retrieve({
-        object_name,
-        time_zone_offset,
-        hookExecute,
-        extensions,
-        criteria,
-      }).catch((_: Error) => _)
-      if (records instanceof Error) {
-        reject(records)
-        return
-      }
+      promises.push(
+        _retrieve({
+          object_name,
+          time_zone_offset,
+          hookExecute,
+          extensions,
+          criteria,
+        }),
+      )
 
-      if (records.length === 0) {
-        break
-      }
-
-      results = results.concat(records)
       offset += 100
     }
 
-    resolve(results)
+    const awaits = await Promise.all(promises).catch((_: Error) => _)
+    if (awaits instanceof Error) {
+      reject(awaits)
+      return
+    }
+
+    resolve(awaits.flat())
   })
 }
 
