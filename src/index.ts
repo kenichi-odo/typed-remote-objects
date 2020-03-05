@@ -337,7 +337,7 @@ const _retrieves = <SObject extends object, Extensions>({
           time_zone_offset,
           hookExecute,
           extensions,
-          criteria,
+          criteria: Deepmerge({}, criteria),
         }),
       )
 
