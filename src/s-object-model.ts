@@ -1,17 +1,59 @@
 type WhereAndOr<SObject> = {
+  /**
+   * AND
+   */
   and?: Where<SObject>
+
+  /**
+   * OR
+   */
   or?: Where<SObject>
 }
 
 export type WhereCondition<T> = {
+  /**
+   * =
+   */
   eq?: T
+
+  /**
+   * !=
+   */
   ne?: T
+
+  /**
+   * \<
+   */
   lt?: T
+
+  /**
+   * \<=
+   */
   lte?: T
+
+  /**
+   * \>
+   */
   gt?: T
+
+  /**
+   * \>=
+   */
   gte?: T
+
+  /**
+   * LIKE
+   */
   like?: string
+
+  /**
+   * IN
+   */
   in?: T[]
+
+  /**
+   * NOT IN
+   */
   nin?: T[]
 }
 

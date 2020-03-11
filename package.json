@@ -5,8 +5,8 @@
     "@babel/core": "^7.8.7",
     "@babel/preset-env": "^7.8.7",
     "@types/webpack": "^4.41.7",
-    "@typescript-eslint/eslint-plugin": "^2.22.0",
-    "@typescript-eslint/parser": "^2.22.0",
+    "@typescript-eslint/eslint-plugin": "^2.23.0",
+    "@typescript-eslint/parser": "^2.23.0",
     "babel-loader": "^8.0.6",
     "core-js": "^3.6.4",
     "deepmerge": "^4.2.2",
@@ -14,7 +14,7 @@
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-only-warn": "^1.0.2",
     "eslint-plugin-prettier": "^3.1.2",
-    "eslint-plugin-vue": "^6.2.1",
+    "eslint-plugin-vue": "^6.2.2",
     "prettier": "^1.19.1",
     "regenerator-runtime": "^0.13.3",
     "ts-custom-error": "^3.1.1",
@@ -53,5 +53,5 @@
     "deps:clean": "rm -dfr ./lib && rm -dfr ./node_modules && rm -f ./yarn.lock && yarn"
   },
   "types": "./lib/types/index.d.ts",
-  "version": "2.0.0-beta.54"
+  "version": "2.0.0-beta.55"
 }
