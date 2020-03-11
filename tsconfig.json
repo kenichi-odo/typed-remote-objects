@@ -51,7 +51,6 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "pretty": true,
-    "removeComments": true,
     "strictBindCallApply": true,
     "strictFunctionTypes": true,
     "strictNullChecks": true,
