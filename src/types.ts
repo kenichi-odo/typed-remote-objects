@@ -19,6 +19,10 @@ export type UpsertOptions = {
   fetch: boolean
 }
 
+export type FetchAllOptions = {
+  parallel: boolean
+}
+
 export type TROInstance<SObject, Extensions> = {
   _wheres: Where<SObject>
   _orders: Order<SObject>
@@ -45,7 +49,7 @@ export type TROInstance<SObject, Extensions> = {
   offset(size: number): TROInstance<SObject, Extensions>
   size(size: number): TROInstance<SObject, Extensions>
   one(): Promise<TRORecord<SObject, Extensions> | undefined>
-  all(): Promise<TRORecord<SObject, Extensions>[]>
+  all(options?: FetchAllOptions): Promise<TRORecord<SObject, Extensions>[]>
   insert(props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
   update(id: string, props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
   delete(id: string): Promise<void>

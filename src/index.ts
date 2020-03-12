@@ -4,7 +4,7 @@ import Deepmerge from 'deepmerge'
 import { CustomError } from 'ts-custom-error'
 
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
-import { TRORecord, TRORecordInstance, TROInstance, UpsertOptions } from './types'
+import { TRORecord, TRORecordInstance, TROInstance, UpsertOptions, FetchAllOptions } from './types'
 export { TRORecord }
 
 export class TROError extends CustomError {
@@ -286,6 +286,7 @@ const _retrieves = <SObject extends object, Extensions>({
   extensions,
   criteria,
   size,
+  options,
 }: {
   object_name: string
   time_zone_offset: number
@@ -293,6 +294,7 @@ const _retrieves = <SObject extends object, Extensions>({
   extensions: Extensions
   criteria: Criteria<SObject>
   size?: number
+  options?: FetchAllOptions
 }) => {
   return new Promise<TRORecord<SObject, Extensions>[]>(async (resolve, reject) => {
     if (criteria.limit != null || criteria.offset != null) {
@@ -312,11 +314,50 @@ const _retrieves = <SObject extends object, Extensions>({
       return
     }
 
+    let offset = 0
     if (size == null) {
       size = 2000
     }
 
-    let offset = 0
+    if (options == null || !options.parallel) {
+      let results: TRORecord<SObject, Extensions>[] = []
+      while (size > 0) {
+        if (size > 100) {
+          criteria.limit = 100
+          size -= 100
+        } else {
+          criteria.limit = size
+          size = 0
+        }
+
+        if (offset !== 0) {
+          criteria.offset = offset
+        }
+
+        const records = await _retrieve({
+          object_name,
+          time_zone_offset,
+          hookExecute,
+          extensions,
+          criteria,
+        }).catch((_: Error) => _)
+        if (records instanceof Error) {
+          reject(records)
+          return
+        }
+
+        if (records.length === 0) {
+          break
+        }
+
+        results = results.concat(records)
+        offset += 100
+      }
+
+      resolve(results)
+      return
+    }
+
     const promises: Promise<TRORecord<SObject, Extensions>[]>[] = []
     while (size > 0) {
       if (size > 100) {
@@ -469,7 +510,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
 
       return _.length === 0 ? undefined : _[0]
     },
-    async all() {
+    async all(options) {
       const criteria: Criteria<SObject> = {}
       if (Object.keys(this._wheres).length !== 0) {
         criteria.where = this._wheres
@@ -489,6 +530,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         extensions,
         criteria,
         size: this._size,
+        options,
       })
     },
     async insert(props, options) {
