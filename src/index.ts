@@ -3,7 +3,7 @@ import { CustomError } from 'ts-custom-error'
 
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
-import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
+import { RemoteObject, Criteria, Where, OrderType, WhereCondition } from './s-object-model'
 import { TRORecord, TROInstance, UpsertOptions, FetchAllOptions, FetchResultTypes } from './types'
 export { TRORecord }
 
@@ -182,8 +182,8 @@ const _retrieve = <T, U>({
       console.log('criteria.where', criteria.where)
       Object.keys(criteria.where).forEach(field_name => {
         console.log('field_name', field_name)
-        const w: Where<T> = criteria.where![field_name]
-        console.log('w', w)
+        const wc: WhereCondition<T> = criteria.where![field_name]
+        console.log('wc', wc)
         // if (_ === 'and' || _ === 'or') {
         //   Object.keys(w).forEach(ao_key_ => {
         //     const aow = w[ao_key_]
@@ -197,11 +197,12 @@ const _retrieve = <T, U>({
         //   return
         // }
 
-        const v = w[Object.keys(w)[0]]
+        const v = wc[Object.keys(wc)[0]]
+        console.log('v', v)
         if (v instanceof Date) {
           const adjust_date = new Date(v)
           adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
-          w[Object.keys(w)[0]] = adjust_date
+          wc[Object.keys(wc)[0]] = adjust_date
         }
       })
     }
