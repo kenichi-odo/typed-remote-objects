@@ -1,56 +1,52 @@
 import { Where, Order, WhereCondition, OrderType } from './s-object-model'
 
-export type TRORecordInstance<SObject, Extensions> = {
-  _update_fields: (keyof SObject)[]
-  set<Field extends keyof SObject>(
-    field_name: Field,
-    value: SObject[Field],
-  ): Readonly<SObject> & TRORecordInstance<SObject, Extensions>
-  update(options?: UpsertOptions): Promise<TRORecord<SObject, Extensions>>
-  delete(): Promise<void>
-  toObject(): SObject
+export type TRORecord<T, U> = Readonly<T> &
+  U & {
+    _update_fields: (keyof T)[]
+    set<K extends keyof T>(field_name: K, value: T[K]): TRORecord<T, U>
+    update(): Promise<TRORecord<T, U>>
+    update<K extends keyof FetchResultTypes<T, U>>(options?: UpsertOptions<K>): Promise<FetchResultTypes<T, U>[K]>
+    delete(): Promise<void>
+    toObject(): T
+  }
+
+export type FetchResultTypes<T, U> = {
+  true: TRORecord<T, U>
+  false: void
 }
 
-export type TRORecord<SObject, Extensions = {}> = Readonly<SObject> &
-  TRORecordInstance<SObject, Extensions> &
-  Extensions
-
-export type UpsertOptions = {
-  fetch: boolean
+export type UpsertOptions<T> = {
+  fetch: T
 }
 
 export type FetchAllOptions = {
   parallel: boolean
 }
 
-export type TROInstance<SObject, Extensions> = {
-  _wheres: Where<SObject>
-  _orders: Order<SObject>
+export type TROInstance<T, U> = {
+  _wheres: Where<T>
+  _orders: Order<T>[]
   _limit: number | undefined
   _offset: number | undefined
   _size: number | undefined
-  where<Field extends keyof SObject>(
-    field: Field,
-    condition: WhereCondition<SObject[Field]>,
-  ): TROInstance<SObject, Extensions>
-  wheres(wheres: Where<SObject>): TROInstance<SObject, Extensions>
-  and(
-    ...wheres: ((_: {
-      where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
-    }) => void)[]
-  ): TROInstance<SObject, Extensions>
-  or(
-    ...wheres: ((_: {
-      where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
-    }) => void)[]
-  ): TROInstance<SObject, Extensions>
-  order(field: keyof SObject, order_type: OrderType): TROInstance<SObject, Extensions>
-  limit(size: number): TROInstance<SObject, Extensions>
-  offset(size: number): TROInstance<SObject, Extensions>
-  size(size: number): TROInstance<SObject, Extensions>
-  one(): Promise<TRORecord<SObject, Extensions> | undefined>
-  all(options?: FetchAllOptions): Promise<TRORecord<SObject, Extensions>[]>
-  insert(props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
-  update(id: string, props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
+  where<K extends keyof T>(field: K, condition: WhereCondition<T[K]>): TROInstance<T, U>
+  wheres(wheres: Where<T>): TROInstance<T, U>
+  order(field: keyof T, order_type: OrderType): TROInstance<T, U>
+  limit(size: number): TROInstance<T, U>
+  offset(size: number): TROInstance<T, U>
+  size(size: number): TROInstance<T, U>
+  one(): Promise<TRORecord<T, U> | undefined>
+  all(options?: FetchAllOptions): Promise<TRORecord<T, U>[]>
+  insert(props: T): Promise<TRORecord<T, U>>
+  insert<K extends keyof FetchResultTypes<T, U>>(
+    props: T,
+    options: UpsertOptions<K>,
+  ): Promise<FetchResultTypes<T, U>[K]>
+  update(id: string, props: T): Promise<TRORecord<T, U>>
+  update<K extends keyof FetchResultTypes<T, U>>(
+    id: string,
+    props: T,
+    options: UpsertOptions<K>,
+  ): Promise<FetchResultTypes<T, U>[K]>
   delete(id: string): Promise<void>
 }

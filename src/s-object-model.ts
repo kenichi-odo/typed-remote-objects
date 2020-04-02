@@ -1,13 +1,13 @@
-type WhereAndOr<SObject> = {
+type WhereAndOr<T> = {
   /**
    * AND
    */
-  and?: Where<SObject>
+  and?: Where<T>
 
   /**
    * OR
    */
-  or?: Where<SObject>
+  or?: Where<T>
 }
 
 export type WhereCondition<T> = {
@@ -57,21 +57,21 @@ export type WhereCondition<T> = {
   nin?: T[]
 }
 
-export type Where<SObject> = WhereAndOr<SObject> & { [Field in keyof SObject]: WhereCondition<SObject[Field]> }
+export type Where<T> = WhereAndOr<T> & { [K in keyof T]: WhereCondition<T[K]> }
 
 export type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 
-export type Order<SObject> = { [Field in keyof SObject]: OrderType }[]
+export type Order<T> = { [K in keyof T]: OrderType }
 
-export type Criteria<SObject> = {
-  where?: Where<SObject>
-  orderby?: Order<SObject>
+export type Criteria<T> = {
+  where?: Where<T>
+  orderby?: Order<T>[]
   limit?: number
   offset?: number
 }
 
-export type RemoteObjectRecord<SObject> = {
-  get: (field_name: keyof SObject) => any
+export type RemoteObjectRecord<T> = {
+  get: (field_name: keyof T) => any
   _fields: {
     [field_name: string]: {
       type: string
@@ -92,10 +92,7 @@ type RemotingEvent = {
 }
 
 export type RemoteObject = {
-  retrieve<SObject>(
-    criteria: Criteria<SObject>,
-    result: (error: Error | undefined, records: RemoteObjectRecord<SObject>[]) => void,
-  ): void
+  retrieve<T>(criteria: Criteria<T>, result: (error: Error | undefined, records: RemoteObjectRecord<T>[]) => void): void
   create(
     props: { [field_name: string]: any },
     result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
