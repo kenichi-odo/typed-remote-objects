@@ -5,6 +5,8 @@ declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
 import { TRORecord, TROInstance, UpsertOptions, FetchAllOptions, FetchResultTypes } from './types'
+
+export type TROExtensions<T, U> = (_: T) => U
 export { TRORecord }
 
 export class TROError extends CustomError {
@@ -51,7 +53,7 @@ const _create = <T, U>({
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
-  extensions?: (_: T) => U
+  extensions?: TROExtensions<T, U>
   props: T
   options?: UpsertOptions<keyof FetchResultTypes<T, U>>
 }) => {
@@ -106,7 +108,7 @@ const _update = <T, U>({
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
-  extensions?: (_: T) => U
+  extensions?: TROExtensions<T, U>
   props: T
   options?: UpsertOptions<keyof FetchResultTypes<T, U>>
 }) => {
@@ -174,7 +176,7 @@ const _retrieve = <T, U>({
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
-  extensions?: (_: T) => U
+  extensions?: TROExtensions<T, U>
   criteria: Criteria<T>
 }) => {
   return new Promise<TRORecord<T, U>[]>((resolve, reject) => {
@@ -299,7 +301,7 @@ const _retrieves = <T, U>({
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
-  extensions?: (_: T) => U
+  extensions?: TROExtensions<T, U>
   criteria: Criteria<T>
   size?: number
   options?: FetchAllOptions
@@ -412,7 +414,7 @@ const TypedRemoteObjects = <T, U = {}>({
   object_name: string
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
-  extensions?: (_: T) => U
+  extensions?: TROExtensions<T, U>
 }) => {
   const instance: TROInstance<T, U> = {
     _wheres: {} as Where<T>,
