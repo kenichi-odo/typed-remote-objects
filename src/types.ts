@@ -1,4 +1,4 @@
-import { Where, Order, WhereCondition, OrderType } from './s-object-model'
+import { Where, Order, WhereOperator, OrderType } from './s-object-model'
 
 export type TRORecord<T, U = {}> = Readonly<T> &
   U & {
@@ -29,7 +29,7 @@ export type TROInstance<T, U> = {
   _limit: number | undefined
   _offset: number | undefined
   _size: number | undefined
-  where<K extends keyof T>(field: K, condition: WhereCondition<T[K]>): TROInstance<T, U>
+  where<K extends keyof T>(field: K, condition: WhereOperator<T[K]>): TROInstance<T, U>
   wheres(wheres: Where<T>): TROInstance<T, U>
   order(field: keyof T, order_type: OrderType): TROInstance<T, U>
   limit(size: number): TROInstance<T, U>

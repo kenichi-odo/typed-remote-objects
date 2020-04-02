@@ -10,7 +10,7 @@ type WhereAndOr<T> = {
   or?: Where<T>
 }
 
-export type WhereCondition<T> = {
+export type WhereOperator<T> = {
   /**
    * =
    */
@@ -57,7 +57,7 @@ export type WhereCondition<T> = {
   nin?: T[]
 }
 
-export type Where<T> = WhereAndOr<T> & { [K in keyof T]: WhereCondition<T[K]> }
+export type Where<T> = WhereAndOr<T> & { [K in keyof T]: WhereOperator<T[K]> }
 
 export type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 

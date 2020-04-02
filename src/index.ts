@@ -3,7 +3,7 @@ import { CustomError } from 'ts-custom-error'
 
 declare const SObjectModel: { [object_name: string]: new () => RemoteObject }
 
-import { RemoteObject, Criteria, Where, OrderType, WhereCondition } from './s-object-model'
+import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
 import { TRORecord, TROInstance, UpsertOptions, FetchAllOptions, FetchResultTypes } from './types'
 export { TRORecord }
 
@@ -179,32 +179,24 @@ const _retrieve = <T, U>({
 }) => {
   return new Promise<TRORecord<T, U>[]>((resolve, reject) => {
     if (criteria.where != null) {
-      console.log('criteria.where', criteria.where)
-      Object.keys(criteria.where).forEach(field_name => {
-        console.log('field_name', field_name)
-        const wc: WhereCondition<T> = criteria.where![field_name]
-        console.log('wc', wc)
-        // if (_ === 'and' || _ === 'or') {
-        //   Object.keys(w).forEach(ao_key_ => {
-        //     const aow = w[ao_key_]
-        //     const aov = aow[Object.keys(aow)[0]]
-        //     if (aov instanceof Date) {
-        //       const adjust_date = new Date(aov)
-        //       adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
-        //       aow[Object.keys(aow)[0]] = adjust_date
-        //     }
-        //   })
-        //   return
-        // }
+      const adjustDate = ({ where }: { where: Where<T> }) => {
+        Object.keys(where).forEach(field_name => {
+          const w: Where<T> = where[field_name]
+          if (field_name === 'and' || field_name === 'or') {
+            adjustDate({ where: w })
+            return
+          }
 
-        const v = wc[Object.keys(wc)[0]]
-        console.log('v', v)
-        if (v instanceof Date) {
-          const adjust_date = new Date(v)
-          adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
-          wc[Object.keys(wc)[0]] = adjust_date
-        }
-      })
+          const operator_key = Object.keys(w)[0]
+          const value = w[operator_key]
+          if (value instanceof Date) {
+            const adjust_date = new Date(value)
+            adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
+            w[operator_key] = adjust_date
+          }
+        })
+      }
+      adjustDate({ where: criteria.where })
     }
 
     _getSObjectModel({ object_name }).retrieve<T>(criteria, (error, records) => {
@@ -562,30 +554,5 @@ const TypedRemoteObjects = <T, U = {}>({
   }
   return instance
 }
-
-// type Test__cType = Partial<{
-//   Id: string | null
-//   Name: string | null
-// }>
-
-// const extensions = (_: Test__cType) => {
-//   return {
-//     getHoge() {
-//       return _.Id!
-//     },
-//   }
-// }
-
-// type aaa = ReturnType<typeof extensions>
-
-// const hoge = TypedRemoteObjects<Test__cType, ReturnType<typeof extensions>>({
-//   object_name: 'Test__c',
-//   time_zone_offset: 9,
-//   extensions,
-// })
-
-// // const result = await hoge.all()
-// // const aa = result[0]
-// // const aaa = await result[0].set('Id', '').update()
 
 export default TypedRemoteObjects
