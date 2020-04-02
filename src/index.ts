@@ -183,6 +183,7 @@ const _retrieve = <T, U>({
       Object.keys(criteria.where).forEach(field_name => {
         console.log('field_name', field_name)
         const w: Where<T> = criteria.where![field_name]
+        console.log('w', w)
         // if (_ === 'and' || _ === 'or') {
         //   Object.keys(w).forEach(ao_key_ => {
         //     const aow = w[ao_key_]
@@ -210,8 +211,6 @@ const _retrieve = <T, U>({
         reject(_troErrorFactory({ object_name, message: error.message, attributes: { criteria } }))
         return
       }
-
-      console.log('records', records)
 
       resolve(
         records.map(record => {
