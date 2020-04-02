@@ -1,6 +1,6 @@
 import { Where, Order, WhereCondition, OrderType } from './s-object-model'
 
-export type TRORecord<T, U> = Readonly<T> &
+export type TRORecord<T, U = {}> = Readonly<T> &
   U & {
     _update_fields: (keyof T)[]
     set<K extends keyof T>(field_name: K, value: T[K]): TRORecord<T, U>
