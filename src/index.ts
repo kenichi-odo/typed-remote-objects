@@ -210,15 +210,17 @@ const _retrieve = <T, U>({
           const tro_record: TRORecord<T, U> = ({
             _update_fields: [],
             set(fn, v) {
-              const _ = Deepmerge({}, tro_record)
+              const _ = Deepmerge<TRORecord<T, U>>({}, this as TRORecord<T, U>)
               _[fn] = v
               _._update_fields.push(fn)
               return _
             },
             async update(options) {
-              const ops = ({ Id: tro_record['Id'] } as unknown) as T
-              tro_record._update_fields.forEach(_ => {
-                ops[_] = tro_record[_]
+              const self = this as TRORecord<T, U>
+
+              const ops = ({ Id: self['Id'] } as unknown) as T
+              self._update_fields.forEach(_ => {
+                ops[_] = self[_]
               })
 
               const ps = {
@@ -240,7 +242,9 @@ const _retrieve = <T, U>({
               return _
             },
             async delete() {
-              const ps = { object_name, id: tro_record['Id'] }
+              const self = this as TRORecord<T, U>
+
+              const ps = { object_name, id: self['Id'] }
               if (hookExecute == null) {
                 await _delete(ps)
                 return
@@ -251,7 +255,7 @@ const _retrieve = <T, U>({
               })
             },
             toObject() {
-              const _ = Deepmerge({}, tro_record)
+              const _ = Deepmerge({}, this as TRORecord<T, U>)
               delete _._update_fields
               delete _.set
               delete _.update
@@ -405,25 +409,25 @@ const TypedRemoteObjects = <T, U = {}>({
   time_zone_offset: number
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions?: (_: T) => U
-}) => {
-  const instance: TROInstance<T, U> = {
+}): TROInstance<T, U> => {
+  return {
     _wheres: {} as Where<T>,
     _orders: [],
     _limit: undefined,
     _offset: undefined,
     _size: undefined,
     where(field, condition) {
-      const _ = Deepmerge({}, instance)
+      const _ = Deepmerge({}, this)
       _._wheres[field as string] = condition
       return _
     },
     wheres(wheres) {
-      const _ = Deepmerge({}, instance)
+      const _ = Deepmerge({}, this)
       _._wheres = wheres
       return _
     },
     order(field, order_type) {
-      const _ = Deepmerge({}, instance)
+      const _ = Deepmerge({}, this)
       _._orders.push({ [field]: order_type } as { [K in keyof T]: OrderType })
       return _
     },
@@ -432,7 +436,7 @@ const TypedRemoteObjects = <T, U = {}>({
         throw 'Please specify it within 100.'
       }
 
-      const _ = Deepmerge({}, instance)
+      const _ = Deepmerge({}, this)
       _._limit = size
       return _
     },
@@ -441,7 +445,7 @@ const TypedRemoteObjects = <T, U = {}>({
         throw 'Please specify it within 2000.'
       }
 
-      const _ = Deepmerge({}, instance)
+      const _ = Deepmerge({}, this)
       _._offset = size
       return _
     },
@@ -450,18 +454,18 @@ const TypedRemoteObjects = <T, U = {}>({
         throw 'Please specify it within 2000.'
       }
 
-      const _ = Deepmerge({}, instance)
+      const _ = Deepmerge({}, this)
       _._size = size
       return _
     },
     async one(): Promise<any> {
       const criteria: Criteria<T> = {}
-      if (Object.keys(instance._wheres).length !== 0) {
-        criteria.where = instance._wheres
+      if (Object.keys(this._wheres).length !== 0) {
+        criteria.where = this._wheres
       }
 
-      if (instance._orders.length !== 0) {
-        criteria.orderby = instance._orders
+      if (this._orders.length !== 0) {
+        criteria.orderby = this._orders
       }
 
       criteria.limit = 1
@@ -479,16 +483,16 @@ const TypedRemoteObjects = <T, U = {}>({
     },
     async all(options): Promise<any> {
       const criteria: Criteria<T> = {}
-      if (Object.keys(instance._wheres).length !== 0) {
-        criteria.where = instance._wheres
+      if (Object.keys(this._wheres).length !== 0) {
+        criteria.where = this._wheres
       }
 
-      if (instance._orders.length !== 0) {
-        criteria.orderby = instance._orders
+      if (this._orders.length !== 0) {
+        criteria.orderby = this._orders
       }
 
-      criteria.limit = instance._limit
-      criteria.offset = instance._offset
+      criteria.limit = this._limit
+      criteria.offset = this._offset
 
       return await _retrieves({
         object_name,
@@ -496,7 +500,7 @@ const TypedRemoteObjects = <T, U = {}>({
         hookExecute,
         extensions,
         criteria,
-        size: instance._size,
+        size: this._size,
         options,
       })
     },
@@ -552,7 +556,6 @@ const TypedRemoteObjects = <T, U = {}>({
       })
     },
   }
-  return instance
 }
 
 export default TypedRemoteObjects
