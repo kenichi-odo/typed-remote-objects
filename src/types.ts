@@ -11,7 +11,13 @@ export type TRORecordInstance<SObject, Extensions> = {
   toObject(): SObject
 }
 
-export type TRORecord<SObject, Extensions = {}> = Readonly<SObject> &
+type NonNullableWithoutUndefined<T> = T extends null ? never : T
+
+type NonNullableProperty<T> = {
+  [P in keyof T]: NonNullableWithoutUndefined<T[P]>
+}
+
+export type TRORecord<SObject, Extensions = {}> = Readonly<NonNullableProperty<SObject>> &
   TRORecordInstance<SObject, Extensions> &
   Extensions
 
