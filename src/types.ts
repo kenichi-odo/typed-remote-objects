@@ -1,6 +1,12 @@
 import { Where, Order, WhereOperator, OrderType } from './s-object-model'
 
-export type TRORecord<T, U = {}> = Readonly<T> &
+type NonNullableWithoutUndefined<T> = T extends null ? never : T
+
+type NonNullableProperty<T> = {
+  [P in keyof T]: NonNullableWithoutUndefined<T[P]>
+}
+
+export type TRORecord<T, U = {}> = Readonly<NonNullableProperty<T>> &
   U & {
     _update_fields: (keyof T)[]
     set<K extends keyof T>(field_name: K, value: T[K]): TRORecord<T, U>
