@@ -106,4 +106,5 @@ export type RemoteObject = {
     result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
   ): void
   del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void): void
+  _fields: { [field_name: string]: { type: string; shorthand: string } }
 }
