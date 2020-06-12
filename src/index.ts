@@ -22,12 +22,12 @@ const troErrorFactory = (_: { object_name: string; message: string; attributes?:
 }
 
 const _s_object_models: { [object_name: string]: RemoteObject | undefined } = {}
-const _getSObjectModel = ({
+const _getSObjectModel = <SObject extends object>({
   object_name,
   un_accessible_fields,
 }: {
   object_name: string
-  un_accessible_fields: string[]
+  un_accessible_fields: (keyof SObject)[]
 }): RemoteObject => {
   const som = _s_object_models[object_name]
   if (som == null) {
@@ -39,7 +39,7 @@ const _getSObjectModel = ({
     }
 
     const som = new SObjectModel[object_name]()
-    un_accessible_fields.forEach(_ => delete som._fields[_])
+    un_accessible_fields.forEach(_ => delete som._fields[_ as string])
     _s_object_models[object_name] = som
     return som
   }
@@ -58,7 +58,7 @@ const _create = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  un_accessible_fields: string[]
+  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
@@ -114,7 +114,7 @@ const _update = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  un_accessible_fields: string[]
+  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
@@ -160,14 +160,14 @@ const _update = <SObject extends object, Extensions>({
   })
 }
 
-const _delete = ({
+const _delete = <SObject extends object>({
   object_name,
   id,
   un_accessible_fields,
 }: {
   object_name: string
   id: string
-  un_accessible_fields: string[]
+  un_accessible_fields: (keyof SObject)[]
 }) => {
   return new Promise<void>((resolve, reject) => {
     _getSObjectModel({ object_name, un_accessible_fields }).del(id, error => {
@@ -191,7 +191,7 @@ const _retrieve = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  un_accessible_fields: string[]
+  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
@@ -315,7 +315,7 @@ const _retrieves = <SObject extends object, Extensions>({
 }: {
   object_name: string
   time_zone_offset: number
-  un_accessible_fields: string[]
+  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
@@ -433,7 +433,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
 }: {
   object_name: string
   time_zone_offset: number
-  un_accessible_fields?: string[]
+  un_accessible_fields?: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions?: Extensions
 }): TROInstance<SObject, Extensions> => {
