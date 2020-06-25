@@ -231,6 +231,7 @@ const _retrieve = <SObject extends object, Extensions>({
       resolve(
         records.map(record => {
           const tro_record_instance: Readonly<SObject> & TRORecordInstance<SObject, Extensions> = {
+            type: object_name,
             _update_fields: [] as (keyof SObject)[],
             set(fn, v) {
               const _ = Deepmerge({}, this)

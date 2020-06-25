@@ -1,6 +1,7 @@
 import { Where, Order, WhereCondition, OrderType } from './s-object-model'
 
 export type TRORecordInstance<SObject, Extensions> = {
+  type: string
   _update_fields: (keyof SObject)[]
   set<Field extends keyof SObject>(
     field_name: Field,
