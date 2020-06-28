@@ -277,6 +277,7 @@ const _retrieve = <SObject extends object, Extensions>({
             },
             toObject() {
               const _ = Deepmerge({}, this)
+              delete _.type
               delete _._update_fields
               delete _.set
               delete _.update
