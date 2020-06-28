@@ -18,7 +18,7 @@ type NonNullableProperty<T> = {
   [P in keyof T]: NonNullableWithoutUndefined<T[P]>
 }
 
-export type TRORecord<ObjectLiteral, SObject, Extensions> = Readonly<NonNullableProperty<SObject>> &
+export type TRORecord<ObjectLiteral, SObject, Extensions = {}> = Readonly<NonNullableProperty<SObject>> &
   TRORecordInstance<ObjectLiteral, SObject, Extensions> &
   Extensions
 
