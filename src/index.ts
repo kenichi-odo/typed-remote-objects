@@ -47,7 +47,7 @@ const _getSObjectModel = <SObject extends object>({
   return _s_object_models[object_name]!
 }
 
-const _create = <SObject extends object, Extensions>({
+const _create = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
   un_accessible_fields,
@@ -64,7 +64,7 @@ const _create = <SObject extends object, Extensions>({
   props: SObject
   options?: UpsertOptions
 }) => {
-  return new Promise<TRORecord<SObject, Extensions> | undefined>((resolve, reject) => {
+  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve, reject) => {
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
@@ -85,7 +85,7 @@ const _create = <SObject extends object, Extensions>({
         return
       }
 
-      const _ = await _retrieve<SObject, Extensions>({
+      const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
         time_zone_offset,
         un_accessible_fields,
@@ -103,7 +103,7 @@ const _create = <SObject extends object, Extensions>({
   })
 }
 
-const _update = <SObject extends object, Extensions>({
+const _update = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
   un_accessible_fields,
@@ -120,7 +120,7 @@ const _update = <SObject extends object, Extensions>({
   props: SObject
   options?: UpsertOptions
 }) => {
-  return new Promise<TRORecord<SObject, Extensions> | undefined>((resolve, reject) => {
+  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve, reject) => {
     const id = props['Id']
     Object.keys(props).forEach(_ => {
       const p = props[_]
@@ -142,7 +142,7 @@ const _update = <SObject extends object, Extensions>({
         return
       }
 
-      const _ = await _retrieve<SObject, Extensions>({
+      const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
         time_zone_offset,
         un_accessible_fields,
@@ -181,7 +181,7 @@ const _delete = <SObject extends object>({
   })
 }
 
-const _retrieve = <SObject extends object, Extensions>({
+const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
   un_accessible_fields,
@@ -196,7 +196,7 @@ const _retrieve = <SObject extends object, Extensions>({
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
-  return new Promise<TRORecord<SObject, Extensions>[]>((resolve, reject) => {
+  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>((resolve, reject) => {
     if (criteria.where != null) {
       Object.keys(criteria.where).forEach(_ => {
         const w = criteria.where![_]
@@ -230,8 +230,8 @@ const _retrieve = <SObject extends object, Extensions>({
 
       resolve(
         records.map(record => {
-          const tro_record_instance: Readonly<SObject> & TRORecordInstance<SObject, Extensions> = {
-            type: object_name,
+          const tro_record_instance: Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions> = {
+            type: (object_name as unknown) as ObjectLiteral,
             _update_fields: [] as (keyof SObject)[],
             set(fn, v) {
               const _ = Deepmerge({}, this)
@@ -258,7 +258,7 @@ const _retrieve = <SObject extends object, Extensions>({
                 return await _update(ps)
               }
 
-              let _: TRORecord<SObject, Extensions> | undefined
+              let _: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
               hookExecute('update', async () => {
                 _ = await _update(ps)
               })
@@ -285,7 +285,7 @@ const _retrieve = <SObject extends object, Extensions>({
               delete _.toObject
               return _
             },
-          } as Readonly<SObject> & TRORecordInstance<SObject, Extensions>
+          } as Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions>
 
           Object.keys(record._fields).forEach(key => {
             const field = record._fields[key]
@@ -298,14 +298,14 @@ const _retrieve = <SObject extends object, Extensions>({
             tro_record_instance[field_name] = record.get(key as keyof SObject)
           })
 
-          return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<SObject, Extensions>
+          return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<ObjectLiteral, SObject, Extensions>
         }),
       )
     })
   })
 }
 
-const _retrieves = <SObject extends object, Extensions>({
+const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
   time_zone_offset,
   un_accessible_fields,
@@ -324,9 +324,9 @@ const _retrieves = <SObject extends object, Extensions>({
   size?: number
   options?: FetchAllOptions
 }) => {
-  return new Promise<TRORecord<SObject, Extensions>[]>(async (resolve, reject) => {
+  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>(async (resolve, reject) => {
     if (criteria.limit != null || criteria.offset != null) {
-      const _ = await _retrieve({
+      const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
         time_zone_offset,
         un_accessible_fields,
@@ -349,7 +349,7 @@ const _retrieves = <SObject extends object, Extensions>({
     }
 
     if (options == null || !options.parallel) {
-      let results: TRORecord<SObject, Extensions>[] = []
+      let results: TRORecord<ObjectLiteral, SObject, Extensions>[] = []
       while (size > 0) {
         if (size > 100) {
           criteria.limit = 100
@@ -363,7 +363,7 @@ const _retrieves = <SObject extends object, Extensions>({
           criteria.offset = offset
         }
 
-        const records = await _retrieve({
+        const records = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
           time_zone_offset,
           un_accessible_fields,
@@ -388,7 +388,7 @@ const _retrieves = <SObject extends object, Extensions>({
       return
     }
 
-    const promises: Promise<TRORecord<SObject, Extensions>[]>[] = []
+    const promises: Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>[] = []
     while (size > 0) {
       if (size > 100) {
         criteria.limit = 100
@@ -403,7 +403,7 @@ const _retrieves = <SObject extends object, Extensions>({
       }
 
       promises.push(
-        _retrieve({
+        _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
           time_zone_offset,
           un_accessible_fields,
@@ -426,19 +426,19 @@ const _retrieves = <SObject extends object, Extensions>({
   })
 }
 
-const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
+const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = {}>({
   object_name,
   time_zone_offset,
   un_accessible_fields = [],
-  hookExecute,
   extensions = {} as Extensions,
+  hookExecute,
 }: {
   object_name: string
   time_zone_offset: number
   un_accessible_fields?: (keyof SObject)[]
-  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions?: Extensions
-}): TROInstance<SObject, Extensions> => {
+  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
+}): TROInstance<ObjectLiteral, SObject, Extensions> => {
   return {
     _wheres: {} as Where<SObject>,
     _orders: [],
@@ -530,7 +530,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       criteria.limit = 1
       criteria.offset = undefined
 
-      const _ = await _retrieve<SObject, Extensions>({
+      const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
         time_zone_offset,
         un_accessible_fields,
@@ -557,7 +557,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
       criteria.limit = this._limit
       criteria.offset = this._offset
 
-      return await _retrieves<SObject, Extensions>({
+      return await _retrieves<ObjectLiteral, SObject, Extensions>({
         object_name,
         time_zone_offset,
         un_accessible_fields,
@@ -571,12 +571,12 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
     async insert(props, options) {
       const ps = { object_name, time_zone_offset, un_accessible_fields, hookExecute, extensions, props, options }
       if (hookExecute == null) {
-        return await _create(ps)
+        return await _create<ObjectLiteral, SObject, Extensions>(ps)
       }
 
-      let _!: TRORecord<SObject, Extensions> | undefined
+      let _!: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
       await hookExecute('insert', async () => {
-        _ = await _create(ps)
+        _ = await _create<ObjectLiteral, SObject, Extensions>(ps)
       })
       return _
     },
@@ -596,7 +596,7 @@ const TypedRemoteObjects = <SObject extends object, Extensions = {}>({
         return await _update(ps)
       }
 
-      let _!: TRORecord<SObject, Extensions> | undefined
+      let _!: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
       await hookExecute('update', async () => {
         _ = await _update(ps)
       })

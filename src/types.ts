@@ -1,13 +1,13 @@
 import { Where, Order, WhereCondition, OrderType } from './s-object-model'
 
-export type TRORecordInstance<SObject, Extensions> = {
-  type: string
+export type TRORecordInstance<ObjectLiteral, SObject, Extensions> = {
+  type: ObjectLiteral
   _update_fields: (keyof SObject)[]
   set<Field extends keyof SObject>(
     field_name: Field,
     value: SObject[Field],
-  ): Readonly<SObject> & TRORecordInstance<SObject, Extensions>
-  update(options?: UpsertOptions): Promise<TRORecord<SObject, Extensions>>
+  ): Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions>
+  update(options?: UpsertOptions): Promise<TRORecord<ObjectLiteral, SObject, Extensions>>
   delete(): Promise<void>
   toObject(): SObject
 }
@@ -18,8 +18,8 @@ type NonNullableProperty<T> = {
   [P in keyof T]: NonNullableWithoutUndefined<T[P]>
 }
 
-export type TRORecord<SObject, Extensions = {}> = Readonly<NonNullableProperty<SObject>> &
-  TRORecordInstance<SObject, Extensions> &
+export type TRORecord<ObjectLiteral, SObject, Extensions> = Readonly<NonNullableProperty<SObject>> &
+  TRORecordInstance<ObjectLiteral, SObject, Extensions> &
   Extensions
 
 export type UpsertOptions = {
@@ -30,7 +30,7 @@ export type FetchAllOptions = {
   parallel: boolean
 }
 
-export type TROInstance<SObject, Extensions> = {
+export type TROInstance<ObjectLiteral, SObject, Extensions> = {
   _wheres: Where<SObject>
   _orders: Order<SObject>
   _limit: number | undefined
@@ -39,25 +39,29 @@ export type TROInstance<SObject, Extensions> = {
   where<Field extends keyof SObject>(
     field: Field,
     condition: WhereCondition<SObject[Field]>,
-  ): TROInstance<SObject, Extensions>
-  wheres(wheres: Where<SObject>): TROInstance<SObject, Extensions>
+  ): TROInstance<ObjectLiteral, SObject, Extensions>
+  wheres(wheres: Where<SObject>): TROInstance<ObjectLiteral, SObject, Extensions>
   and(
     ...wheres: ((_: {
       where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
     }) => void)[]
-  ): TROInstance<SObject, Extensions>
+  ): TROInstance<ObjectLiteral, SObject, Extensions>
   or(
     ...wheres: ((_: {
       where<Field extends keyof SObject>(field: Field, condition: WhereCondition<SObject[Field]>): void
     }) => void)[]
-  ): TROInstance<SObject, Extensions>
-  order(field: keyof SObject, order_type: OrderType): TROInstance<SObject, Extensions>
-  limit(size: number): TROInstance<SObject, Extensions>
-  offset(size: number): TROInstance<SObject, Extensions>
-  size(size: number): TROInstance<SObject, Extensions>
-  one(): Promise<TRORecord<SObject, Extensions> | undefined>
-  all(options?: FetchAllOptions): Promise<TRORecord<SObject, Extensions>[]>
-  insert(props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
-  update(id: string, props: SObject, options?: UpsertOptions): Promise<TRORecord<SObject, Extensions> | undefined>
+  ): TROInstance<ObjectLiteral, SObject, Extensions>
+  order(field: keyof SObject, order_type: OrderType): TROInstance<ObjectLiteral, SObject, Extensions>
+  limit(size: number): TROInstance<ObjectLiteral, SObject, Extensions>
+  offset(size: number): TROInstance<ObjectLiteral, SObject, Extensions>
+  size(size: number): TROInstance<ObjectLiteral, SObject, Extensions>
+  one(): Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>
+  all(options?: FetchAllOptions): Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>
+  insert(props: SObject, options?: UpsertOptions): Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>
+  update(
+    id: string,
+    props: SObject,
+    options?: UpsertOptions,
+  ): Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>
   delete(id: string): Promise<void>
 }
