@@ -131,32 +131,36 @@ const _update = <SObject extends object, Extensions>({
       }
     })
 
-    _getSObjectModel({ object_name, un_accessible_fields }).update([id], props, async error => {
-      if (error != null) {
-        reject(troErrorFactory({ object_name, message: error.message, attributes: { props } }))
-        return
-      }
+    try {
+      _getSObjectModel({ object_name, un_accessible_fields }).update([id], props, async error => {
+        if (error != null) {
+          reject(troErrorFactory({ object_name, message: error.message, attributes: { props } }))
+          return
+        }
 
-      if (options != null && !options.fetch) {
-        resolve()
-        return
-      }
+        if (options != null && !options.fetch) {
+          resolve()
+          return
+        }
 
-      const _ = await _retrieve<SObject, Extensions>({
-        object_name,
-        time_zone_offset,
-        un_accessible_fields,
-        hookExecute,
-        extensions,
-        criteria: { where: { Id: { eq: id } } as Where<SObject> },
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        reject(_)
-        return
-      }
+        const _ = await _retrieve<SObject, Extensions>({
+          object_name,
+          time_zone_offset,
+          un_accessible_fields,
+          hookExecute,
+          extensions,
+          criteria: { where: { Id: { eq: id } } as Where<SObject> },
+        }).catch((_: Error) => _)
+        if (_ instanceof Error) {
+          reject(_)
+          return
+        }
 
-      resolve(_[0])
-    })
+        resolve(_[0])
+      })
+    } catch (_) {
+      console.log('update_error', _)
+    }
   })
 }
 
