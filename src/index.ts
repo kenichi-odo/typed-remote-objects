@@ -75,7 +75,7 @@ const _create = <SObject extends object, Extensions>({
     })
 
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { un_accessible_fields, props } }))
     try {
       _getSObjectModel({ object_name, un_accessible_fields }).create(props, async (error, ids) => {
         if (ids.length === 0) {
@@ -138,7 +138,7 @@ const _update = <SObject extends object, Extensions>({
     })
 
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, un_accessible_fields, props } }))
     try {
       _getSObjectModel({ object_name, un_accessible_fields }).update([id], props, async error => {
         if (error != null) {
@@ -183,7 +183,7 @@ const _delete = <SObject extends object>({
 }) => {
   return new Promise<void>((resolve, reject) => {
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, un_accessible_fields } }))
     try {
       _getSObjectModel({ object_name, un_accessible_fields }).del(id, error => {
         if (error != null) {
@@ -241,7 +241,7 @@ const _retrieve = <SObject extends object, Extensions>({
     }
 
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { criteria } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { un_accessible_fields, criteria } }))
     try {
       _getSObjectModel({ object_name, un_accessible_fields }).retrieve<SObject>(criteria, (error, records) => {
         if (error != null) {
