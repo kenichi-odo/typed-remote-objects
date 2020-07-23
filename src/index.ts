@@ -231,6 +231,14 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
         }
 
         const v = w[Object.keys(w)[0]]
+        console.log('v', v)
+        console.log('v instanceof Date', v instanceof Date)
+        console.log('v instanceof Date', Array.isArray(v))
+
+        if (Array.isArray(v)) {
+          console.log('v instanceof Date', v[0])
+        }
+
         if (v instanceof Date) {
           const adjust_date = new Date(v.getTime())
           adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
