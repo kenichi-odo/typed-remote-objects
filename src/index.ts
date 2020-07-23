@@ -74,32 +74,38 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
       }
     })
 
-    _getSObjectModel({ object_name, un_accessible_fields }).create(props, async (error, ids) => {
-      if (ids.length === 0) {
-        reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
-        return
-      }
+    const throwError = ({ error }: { error: Error }) =>
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { un_accessible_fields, props } }))
+    try {
+      _getSObjectModel({ object_name, un_accessible_fields }).create(props, async (error, ids) => {
+        if (ids.length === 0) {
+          throwError({ error: error! })
+          return
+        }
 
-      if (options != null && !options.fetch) {
-        resolve()
-        return
-      }
+        if (options != null && !options.fetch) {
+          resolve()
+          return
+        }
 
-      const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
-        object_name,
-        time_zone_offset,
-        un_accessible_fields,
-        hookExecute,
-        extensions,
-        criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        reject(_)
-        return
-      }
+        const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
+          object_name,
+          time_zone_offset,
+          un_accessible_fields,
+          hookExecute,
+          extensions,
+          criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
+        }).catch((_: Error) => _)
+        if (_ instanceof Error) {
+          reject(_)
+          return
+        }
 
-      resolve(_[0])
-    })
+        resolve(_[0])
+      })
+    } catch (error) {
+      throwError({ error })
+    }
   })
 }
 
@@ -130,33 +136,38 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
         props[_] = adjust_date
       }
     })
+    const throwError = ({ error }: { error: Error }) =>
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, un_accessible_fields, props } }))
+    try {
+      _getSObjectModel({ object_name, un_accessible_fields }).update([id], props, async error => {
+        if (error != null) {
+          throwError({ error })
+          return
+        }
 
-    _getSObjectModel({ object_name, un_accessible_fields }).update([id], props, async error => {
-      if (error != null) {
-        reject(troErrorFactory({ object_name, message: error.message, attributes: { props } }))
-        return
-      }
+        if (options != null && !options.fetch) {
+          resolve()
+          return
+        }
 
-      if (options != null && !options.fetch) {
-        resolve()
-        return
-      }
+        const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
+          object_name,
+          time_zone_offset,
+          un_accessible_fields,
+          hookExecute,
+          extensions,
+          criteria: { where: { Id: { eq: id } } as Where<SObject> },
+        }).catch((_: Error) => _)
+        if (_ instanceof Error) {
+          reject(_)
+          return
+        }
 
-      const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
-        object_name,
-        time_zone_offset,
-        un_accessible_fields,
-        hookExecute,
-        extensions,
-        criteria: { where: { Id: { eq: id } } as Where<SObject> },
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        reject(_)
-        return
-      }
-
-      resolve(_[0])
-    })
+        resolve(_[0])
+      })
+    } catch (error) {
+      throwError({ error })
+    }
   })
 }
 
@@ -170,14 +181,20 @@ const _delete = <SObject extends object>({
   un_accessible_fields: (keyof SObject)[]
 }) => {
   return new Promise<void>((resolve, reject) => {
-    _getSObjectModel({ object_name, un_accessible_fields }).del(id, error => {
-      if (error != null) {
-        reject(troErrorFactory({ object_name, message: error.message, attributes: { id } }))
-        return
-      }
+    const throwError = ({ error }: { error: Error }) =>
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, un_accessible_fields } }))
+    try {
+      _getSObjectModel({ object_name, un_accessible_fields }).del(id, error => {
+        if (error != null) {
+          throwError({ error })
+          return
+        }
 
-      resolve()
-    })
+        resolve()
+      })
+    } catch (error) {
+      throwError({ error })
+    }
   })
 }
 
@@ -222,86 +239,92 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
       })
     }
 
-    _getSObjectModel({ object_name, un_accessible_fields }).retrieve<SObject>(criteria, (error, records) => {
-      if (error != null) {
-        reject(troErrorFactory({ object_name, message: error.message, attributes: { criteria } }))
-        return
-      }
+    const throwError = ({ error }: { error: Error }) =>
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { un_accessible_fields, criteria } }))
+    try {
+      _getSObjectModel({ object_name, un_accessible_fields }).retrieve<SObject>(criteria, (error, records) => {
+        if (error != null) {
+          throwError({ error })
+          return
+        }
 
-      resolve(
-        records.map(record => {
-          const tro_record_instance: Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions> = {
-            type: (object_name as unknown) as ObjectLiteral,
-            _update_fields: [] as (keyof SObject)[],
-            set(fn, v) {
-              const _ = Deepmerge({}, this)
-              _[fn as string] = v
-              _._update_fields.push(fn)
-              return _
-            },
-            async update(options) {
-              const ops = { Id: this['Id'] } as SObject
-              this._update_fields.forEach(_ => {
-                ops[_ as string] = this[_]
-              })
+        resolve(
+          records.map(record => {
+            const tro_record_instance: Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions> = {
+              type: (object_name as unknown) as ObjectLiteral,
+              _update_fields: [] as (keyof SObject)[],
+              set(fn, v) {
+                const _ = Deepmerge({}, this)
+                _[fn as string] = v
+                _._update_fields.push(fn)
+                return _
+              },
+              async update(options) {
+                const ops = { Id: this['Id'] } as SObject
+                this._update_fields.forEach(_ => {
+                  ops[_ as string] = this[_]
+                })
 
-              const ps = {
-                object_name,
-                time_zone_offset,
-                un_accessible_fields,
-                hookExecute,
-                extensions,
-                props: ops,
-                options,
+                const ps = {
+                  object_name,
+                  time_zone_offset,
+                  un_accessible_fields,
+                  hookExecute,
+                  extensions,
+                  props: ops,
+                  options,
+                }
+                if (hookExecute == null) {
+                  return await _update(ps)
+                }
+
+                let _: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
+                hookExecute('update', async () => {
+                  _ = await _update(ps)
+                })
+                return _
+              },
+              async delete() {
+                const ps = { object_name, id: this['Id'], un_accessible_fields }
+                if (hookExecute == null) {
+                  await _delete(ps)
+                  return
+                }
+
+                hookExecute('delete', async () => {
+                  await _delete(ps)
+                })
+              },
+              toObject() {
+                const _ = Deepmerge({}, this)
+                delete _.type
+                delete _._update_fields
+                delete _.set
+                delete _.update
+                delete _.delete
+                delete _.toObject
+                return _
+              },
+            } as Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions>
+
+            Object.keys(record._fields).forEach(key => {
+              const field = record._fields[key]
+
+              let field_name = key
+              if (field.shorthand != null && field.shorthand !== '') {
+                field_name = field.shorthand
               }
-              if (hookExecute == null) {
-                return await _update(ps)
-              }
 
-              let _: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
-              hookExecute('update', async () => {
-                _ = await _update(ps)
-              })
-              return _
-            },
-            async delete() {
-              const ps = { object_name, id: this['Id'], un_accessible_fields }
-              if (hookExecute == null) {
-                await _delete(ps)
-                return
-              }
+              tro_record_instance[field_name] = record.get(key as keyof SObject)
+            })
 
-              hookExecute('delete', async () => {
-                await _delete(ps)
-              })
-            },
-            toObject() {
-              const _ = Deepmerge({}, this)
-              delete _.type
-              delete _._update_fields
-              delete _.set
-              delete _.update
-              delete _.delete
-              delete _.toObject
-              return _
-            },
-          } as Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions>
-
-          Object.keys(record._fields).forEach(key => {
-            const field = record._fields[key]
-
-            let field_name = key
-            if (field.shorthand != null && field.shorthand !== '') {
-              field_name = field.shorthand
-            }
-
-            tro_record_instance[field_name] = record.get(key as keyof SObject)
-          })
-
-          return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<ObjectLiteral, SObject, Extensions>
-        }),
-      )
-    })
+            return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<ObjectLiteral, SObject, Extensions>
+          }),
+        )
+      })
+    } catch (error) {
+      throwError({ error })
+    }
   })
 }
 
