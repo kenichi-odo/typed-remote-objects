@@ -214,7 +214,9 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
   criteria: Criteria<SObject>
 }) => {
   return new Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>((resolve, reject) => {
-    if (criteria.where != null) {
+    const clone_criteria = Deepmerge({}, criteria)
+
+    if (clone_criteria.where != null) {
       const adjustDate = ({ where }: { where: Where<SObject> }) => {
         Object.keys(where).forEach(field_name => {
           const w: Where<SObject> = where[field_name]
@@ -229,7 +231,10 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
             const adjust_date = new Date(value)
             adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
             w[operator_key] = adjust_date
-          } else if (Array.isArray(value)) {
+            return
+          }
+
+          if (Array.isArray(value)) {
             const array_with_convert_date: unknown[] = []
             value.forEach(v => {
               if (v instanceof Date) {
@@ -245,13 +250,19 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
           }
         })
       }
-      adjustDate({ where: criteria.where })
+      adjustDate({ where: clone_criteria.where })
     }
 
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { un_accessible_fields, criteria } }))
+      reject(
+        troErrorFactory({
+          object_name,
+          message: error!.message,
+          attributes: { un_accessible_fields, criteria: clone_criteria },
+        }),
+      )
     try {
-      _getSObjectModel({ object_name, un_accessible_fields }).retrieve<SObject>(criteria, (error, records) => {
+      _getSObjectModel({ object_name, un_accessible_fields }).retrieve<SObject>(clone_criteria, (error, records) => {
         if (error != null) {
           throwError({ error })
           return
