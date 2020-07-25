@@ -215,36 +215,37 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
 }) => {
   return new Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>((resolve, reject) => {
     if (criteria.where != null) {
-      Object.keys(criteria.where).forEach(_ => {
-        const w = criteria.where![_]
-        if (_ === 'and' || _ === 'or') {
-          Object.keys(w).forEach(ao_key_ => {
-            const aow = w[ao_key_]
-            const aov = aow[Object.keys(aow)[0]]
-            if (aov instanceof Date) {
-              const adjust_date = new Date(aov.getTime())
-              adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
-              aow[Object.keys(aow)[0]] = adjust_date
-            }
-          })
-          return
-        }
+      const adjustDate = ({ where }: { where: Where<SObject> }) => {
+        Object.keys(where).forEach(field_name => {
+          const w: Where<SObject> = where[field_name]
+          if (field_name === 'and' || field_name === 'or') {
+            adjustDate({ where: w })
+            return
+          }
 
-        const v = w[Object.keys(w)[0]]
-        console.log('v', v)
-        console.log('v instanceof Date', v instanceof Date)
-        console.log('v instanceof Date', Array.isArray(v))
+          const operator_key = Object.keys(w)[0]
+          const value = w[operator_key]
+          if (value instanceof Date) {
+            const adjust_date = new Date(value)
+            adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
+            w[operator_key] = adjust_date
+          } else if (Array.isArray(value)) {
+            const array_with_convert_date: unknown[] = []
+            value.forEach(v => {
+              if (v instanceof Date) {
+                const adjust_date = new Date(v)
+                adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
+                array_with_convert_date.push(adjust_date)
+                return
+              }
 
-        if (Array.isArray(v)) {
-          console.log('v instanceof Date', v[0])
-        }
-
-        if (v instanceof Date) {
-          const adjust_date = new Date(v.getTime())
-          adjust_date.setHours(adjust_date.getHours() - time_zone_offset)
-          w[Object.keys(w)[0]] = adjust_date
-        }
-      })
+              array_with_convert_date.push(v)
+            })
+            w[operator_key] = array_with_convert_date
+          }
+        })
+      }
+      adjustDate({ where: criteria.where })
     }
 
     const throwError = ({ error }: { error: Error }) =>
