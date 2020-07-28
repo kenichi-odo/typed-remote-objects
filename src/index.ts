@@ -4,7 +4,7 @@ import Deepmerge from 'deepmerge'
 import { CustomError } from 'ts-custom-error'
 
 import { RemoteObject, Criteria, Where, OrderType } from './s-object-model'
-import { TRORecord, TRORecordInstance, TROInstance, UpsertOptions, FetchAllOptions } from './types'
+import { TRORecord, TROInstance, UpsertOptions, FetchAllOptions, FetchResultTypes } from './types'
 export { TRORecord }
 
 export class TROError extends CustomError {
@@ -62,7 +62,7 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
-  options?: UpsertOptions
+  options?: UpsertOptions<keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>
 }) => {
   return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve, reject) => {
     Object.keys(props).forEach(_ => {
@@ -124,7 +124,7 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
-  options?: UpsertOptions
+  options?: UpsertOptions<keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>
 }) => {
   return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve, reject) => {
     const id = props['Id']
@@ -270,19 +270,25 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
 
         resolve(
           records.map(record => {
-            const tro_record_instance: Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions> = {
+            const tro_record: TRORecord<ObjectLiteral, SObject, Extensions> = ({
               type: (object_name as unknown) as ObjectLiteral,
               _update_fields: [] as (keyof SObject)[],
               set(fn, v) {
-                const _ = Deepmerge({}, this)
-                _[fn as string] = v
+                const _ = Deepmerge<TRORecord<ObjectLiteral, SObject, Extensions>>(
+                  {},
+                  this as TRORecord<ObjectLiteral, SObject, Extensions>,
+                )
+
+                _[fn] = v
                 _._update_fields.push(fn)
                 return _
               },
               async update(options) {
-                const ops = { Id: this['Id'] } as SObject
-                this._update_fields.forEach(_ => {
-                  ops[_ as string] = this[_]
+                const self = this as TRORecord<ObjectLiteral, SObject, Extensions>
+
+                const ops = ({ Id: self['Id'] } as unknown) as SObject
+                self._update_fields.forEach(_ => {
+                  ops[_ as string] = self[_]
                 })
 
                 const ps = {
@@ -305,7 +311,9 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                 return _
               },
               async delete() {
-                const ps = { object_name, id: this['Id'], un_accessible_fields }
+                const self = this as TRORecord<ObjectLiteral, SObject, Extensions>
+
+                const ps = { object_name, id: self['Id'], un_accessible_fields }
                 if (hookExecute == null) {
                   await _delete(ps)
                   return
@@ -316,7 +324,7 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                 })
               },
               toObject() {
-                const _ = Deepmerge({}, this)
+                const _ = Deepmerge({}, this as TRORecord<ObjectLiteral, SObject, Extensions>)
                 delete _.type
                 delete _._update_fields
                 delete _.set
@@ -325,7 +333,7 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                 delete _.toObject
                 return _
               },
-            } as Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions>
+            } as unknown) as TRORecord<ObjectLiteral, SObject, Extensions>
 
             Object.keys(record._fields).forEach(key => {
               const field = record._fields[key]
@@ -335,10 +343,10 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                 field_name = field.shorthand
               }
 
-              tro_record_instance[field_name] = record.get(key as keyof SObject)
+              tro_record[field_name] = record.get(key as keyof SObject)
             })
 
-            return Deepmerge.all([{}, tro_record_instance, extensions]) as TRORecord<ObjectLiteral, SObject, Extensions>
+            return Deepmerge.all([{}, tro_record, extensions]) as TRORecord<ObjectLiteral, SObject, Extensions>
           }),
         )
       })
@@ -611,19 +619,26 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
         options,
       })
     },
-    async insert(props, options) {
+    async insert<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
+      props: SObject,
+      options?: UpsertOptions<K>,
+    ): Promise<any> {
       const ps = { object_name, time_zone_offset, un_accessible_fields, hookExecute, extensions, props, options }
       if (hookExecute == null) {
         return await _create<ObjectLiteral, SObject, Extensions>(ps)
       }
 
-      let _!: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
+      let _: unknown
       await hookExecute('insert', async () => {
         _ = await _create<ObjectLiteral, SObject, Extensions>(ps)
       })
       return _
     },
-    async update(id, props, options) {
+    async update<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
+      id: string,
+      props: SObject,
+      options?: UpsertOptions<K>,
+    ): Promise<any> {
       ;(props as SObject & { Id: string }).Id = id
       const ps = {
         object_name,
@@ -639,7 +654,7 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
         return await _update(ps)
       }
 
-      let _!: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
+      let _: unknown
       await hookExecute('update', async () => {
         _ = await _update(ps)
       })

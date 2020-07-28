@@ -1,17 +1,5 @@
 import { Where, Order, WhereCondition, OrderType } from './s-object-model'
 
-export type TRORecordInstance<ObjectLiteral, SObject, Extensions> = {
-  type: ObjectLiteral
-  _update_fields: (keyof SObject)[]
-  set<Field extends keyof SObject>(
-    field_name: Field,
-    value: SObject[Field],
-  ): Readonly<SObject> & TRORecordInstance<ObjectLiteral, SObject, Extensions>
-  update(options?: UpsertOptions): Promise<TRORecord<ObjectLiteral, SObject, Extensions>>
-  delete(): Promise<void>
-  toObject(): SObject
-}
-
 type NonNullableWithoutUndefined<T> = T extends null ? never : T
 
 type NonNullableProperty<T> = {
@@ -19,11 +7,25 @@ type NonNullableProperty<T> = {
 }
 
 export type TRORecord<ObjectLiteral, SObject, Extensions = {}> = Readonly<NonNullableProperty<SObject>> &
-  TRORecordInstance<ObjectLiteral, SObject, Extensions> &
-  Extensions
+  Extensions & {
+    type: ObjectLiteral
+    _update_fields: (keyof SObject)[]
+    set<K extends keyof SObject>(field_name: K, value: SObject[K]): TRORecord<ObjectLiteral, SObject, Extensions>
+    update(): Promise<TRORecord<ObjectLiteral, SObject, Extensions>>
+    update<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
+      options?: UpsertOptions<K>,
+    ): Promise<FetchResultTypes<ObjectLiteral, SObject, Extensions>[K]>
+    delete(): Promise<void>
+    toObject(): SObject
+  }
 
-export type UpsertOptions = {
-  fetch: boolean
+export type FetchResultTypes<ObjectLiteral, SObject, Extensions> = {
+  true: TRORecord<ObjectLiteral, SObject, Extensions>
+  false: void
+}
+
+export type UpsertOptions<T> = {
+  fetch: T
 }
 
 export type FetchAllOptions = {
@@ -57,11 +59,16 @@ export type TROInstance<ObjectLiteral, SObject, Extensions> = {
   size(size: number): TROInstance<ObjectLiteral, SObject, Extensions>
   one(): Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>
   all(options?: FetchAllOptions): Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>
-  insert(props: SObject, options?: UpsertOptions): Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>
-  update(
+  insert(props: SObject): Promise<TRORecord<ObjectLiteral, SObject, Extensions>>
+  insert<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
+    props: SObject,
+    options: UpsertOptions<K>,
+  ): Promise<FetchResultTypes<ObjectLiteral, SObject, Extensions>[K]>
+  update(id: string, props: SObject): Promise<TRORecord<ObjectLiteral, SObject, Extensions>>
+  update<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
     id: string,
     props: SObject,
-    options?: UpsertOptions,
-  ): Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>
+    options: UpsertOptions<K>,
+  ): Promise<FetchResultTypes<ObjectLiteral, SObject, Extensions>[K]>
   delete(id: string): Promise<void>
 }
