@@ -26,6 +26,7 @@
   "scm.alwaysShowProviders": true,
   "terminal.integrated.scrollback": 10240,
   "typescript.implementationsCodeLens.enabled": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.updateImportsOnFileMove.enabled": "always",
   "workbench.commandPalette.preserveInput": true,
   "workbench.settings.editor": "json",
