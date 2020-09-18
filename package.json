@@ -28,6 +28,7 @@
     "visualforce"
   ],
   "license": "MIT",
+  "main": "./module/index.js",
   "module": "./module/index.js",
   "name": "typed-remote-objects",
   "repository": {
@@ -38,5 +39,5 @@
     "build": "rm -dfr ./module && tsc"
   },
   "types": "./module/types/index.d.ts",
-  "version": "4.0.0-beta.2"
+  "version": "4.0.0-beta.3"
 }
