@@ -662,4 +662,4 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
   }
 }
 
-export default TypedRemoteObjectsa
+export default TypedRemoteObjects
