@@ -38,6 +38,7 @@
   "scripts": {
     "build": "rm -dfr ./module && tsc"
   },
+  "sideEffects": false,
   "types": "./module/types/index.d.ts",
-  "version": "4.0.0-beta.3"
+  "version": "4.0.0-beta.4"
 }
