@@ -9,7 +9,11 @@
     "files.trimTrailingWhitespace": false
   },
   "diffEditor.ignoreTrimWhitespace": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.detectIndentation": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
   "editor.quickSuggestions": {
     "comments": true,
     "other": true,
@@ -19,18 +23,19 @@
   "editor.renderLineHighlight": "all",
   "editor.smoothScrolling": true,
   "editor.tabSize": 2,
+  "files.eol": "\n",
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
   "javascript.referencesCodeLens.enabled": true,
   "liveshare.languages.allowGuestCommandControl": true,
-  "scm.alwaysShowProviders": true,
   "terminal.integrated.scrollback": 10240,
   "typescript.implementationsCodeLens.enabled": true,
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.updateImportsOnFileMove.enabled": "always",
+  "visualforce.format.endWithNewline": true,
+  "visualforce.format.wrapAttributes": "auto",
   "workbench.commandPalette.preserveInput": true,
   "workbench.settings.editor": "json",
   "workbench.settings.useSplitJSON": true,
-  "workbench.statusBar.feedback.visible": false,
   "workbench.tips.enabled": false
 }

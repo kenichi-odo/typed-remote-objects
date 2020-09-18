@@ -310,7 +310,9 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                 })
               },
               toObject() {
-                const _ = Deepmerge({}, this as TRORecord<ObjectLiteral, SObject, Extensions>)
+                const _ = Deepmerge({}, this as TRORecord<ObjectLiteral, SObject, Extensions>) as Partial<
+                  TRORecord<ObjectLiteral, SObject, Extensions>
+                >
                 delete _.type
                 delete _._update_fields
                 delete _.set
