@@ -11,7 +11,8 @@
     "module",
     "LICENSE",
     "package.json",
-    "README.md"
+    "README.md",
+    "src"
   ],
   "keywords": [
     "immutable",
@@ -37,5 +38,5 @@
     "build": "rm -dfr ./module && tsc"
   },
   "types": "./module/types/index.d.ts",
-  "version": "4.0.0-beta.1"
+  "version": "4.0.0-beta.2"
 }
