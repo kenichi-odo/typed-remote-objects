@@ -20,22 +20,10 @@
     "strings": true
   },
   "editor.renderControlCharacters": true,
-  "editor.renderLineHighlight": "all",
-  "editor.smoothScrolling": true,
   "editor.tabSize": 2,
   "files.eol": "\n",
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
-  "javascript.referencesCodeLens.enabled": true,
-  "liveshare.languages.allowGuestCommandControl": true,
-  "terminal.integrated.scrollback": 10240,
-  "typescript.implementationsCodeLens.enabled": true,
   "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.updateImportsOnFileMove.enabled": "always",
-  "visualforce.format.endWithNewline": true,
-  "visualforce.format.wrapAttributes": "auto",
-  "workbench.commandPalette.preserveInput": true,
-  "workbench.settings.editor": "json",
-  "workbench.settings.useSplitJSON": true,
-  "workbench.tips.enabled": false
+  "typescript.updateImportsOnFileMove.enabled": "always"
 }
