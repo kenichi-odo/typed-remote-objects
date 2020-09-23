@@ -56,36 +56,36 @@ export function fetchAll<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
   criteria: Criteria<ObjectType> | undefined = {},
 ): Promise<TRORecord<ObjectName, ObjectType>[]> {
-  return new Promise((resolve, reject) => {
-    const clone_criteria = deepmerge<typeof criteria>({}, criteria)
+  const clone_criteria = deepmerge<typeof criteria>({}, criteria)
 
-    const adjustDate = (where: NonNullable<typeof clone_criteria>['where']) => {
-      if (where == null) {
+  const adjustDate = (where: NonNullable<typeof clone_criteria>['where']) => {
+    if (where == null) {
+      return
+    }
+
+    Object.keys(where).forEach(field_name => {
+      if (field_name === 'and' || field_name === 'or') {
+        adjustDate(where[field_name]!)
         return
       }
 
-      Object.keys(where).forEach(field_name => {
-        if (field_name === 'and' || field_name === 'or') {
-          adjustDate(where[field_name]!)
-          return
-        }
+      const w = where[field_name]
 
-        const w = where[field_name]
+      const operator_key = Object.keys(w)[0]
+      const value = w[operator_key]
+      if (value instanceof Date) {
+        w[operator_key] = setHours(value, -time_zone_offset)
+        return
+      }
 
-        const operator_key = Object.keys(w)[0]
-        const value = w[operator_key]
-        if (value instanceof Date) {
-          w[operator_key] = setHours(value, -time_zone_offset)
-          return
-        }
+      if (Array.isArray(value)) {
+        w[operator_key] = value.map(v => (v instanceof Date ? setHours(v, -time_zone_offset) : v))
+      }
+    })
+  }
+  adjustDate(clone_criteria.where)
 
-        if (Array.isArray(value)) {
-          w[operator_key] = value.map(v => (v instanceof Date ? setHours(v, -time_zone_offset) : v))
-        }
-      })
-    }
-    adjustDate(clone_criteria.where)
-
+  return new Promise((resolve, reject) => {
     try {
       ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.retrieve(
         clone_criteria,
@@ -116,9 +116,10 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
   criteria: Criteria<ObjectType> | undefined = {},
 ): Promise<TRORecord<ObjectName, ObjectType> | undefined> {
-  criteria.limit = 1
+  const clone_criteria = deepmerge<typeof criteria>({}, criteria)
+  clone_criteria.limit = 1
 
-  const _ = await fetchAll<ObjectName, ObjectType>(object_name, criteria).catch((_: Error) => _)
+  const _ = await fetchAll<ObjectName, ObjectType>(object_name, clone_criteria).catch((_: Error) => _)
   if (_ instanceof Error) {
     return Promise.reject(_)
   }
@@ -131,16 +132,16 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
   props: TROTransaction<ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
+  const clone_props = deepmerge<typeof props>({}, props)
+
+  Object.keys(clone_props).forEach(_ => {
+    const p = clone_props[_]
+    if (p instanceof Date) {
+      clone_props[_] = setHours(p, -time_zone_offset)
+    }
+  })
+
   return new Promise((resolve, reject) => {
-    const clone_props = deepmerge<typeof props>({}, props)
-
-    Object.keys(clone_props).forEach(_ => {
-      const p = clone_props[_]
-      if (p instanceof Date) {
-        clone_props[_] = setHours(p, -time_zone_offset)
-      }
-    })
-
     try {
       ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.create(
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
@@ -177,16 +178,16 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
   props: TROTransaction<ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
+  const clone_props = deepmerge<typeof props>({}, props)
+
+  Object.keys(clone_props).forEach(_ => {
+    const p = clone_props[_]
+    if (p instanceof Date) {
+      clone_props[_] = setHours(p, -time_zone_offset)
+    }
+  })
+
   return new Promise((resolve, reject) => {
-    const clone_props = deepmerge<typeof props>({}, props)
-
-    Object.keys(clone_props).forEach(_ => {
-      const p = clone_props[_]
-      if (p instanceof Date) {
-        clone_props[_] = setHours(p, -time_zone_offset)
-      }
-    })
-
     try {
       ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.update(
         [clone_props.Id!],
@@ -234,4 +235,10 @@ export function del<ObjectName extends string>(object_name: ObjectName, id: stri
       reject(new TROError(object_name, error.message, { id }))
     }
   })
+}
+
+export function toTransaction<ObjectName, ObjectType>(_: TRORecord<ObjectName, ObjectType>) {
+  const clone = deepmerge<typeof _ & { type }>({}, _)
+  delete clone.type
+  return clone
 }
