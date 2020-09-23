@@ -237,7 +237,9 @@ export function del<ObjectName extends string>(object_name: ObjectName, id: stri
   })
 }
 
-export function toTransaction<ObjectName, ObjectType>(_: TRORecord<ObjectName, ObjectType>) {
+export function toTransaction<ObjectName, ObjectType>(
+  _: TRORecord<ObjectName, ObjectType>,
+): TROTransaction<ObjectType> {
   const clone = deepmerge<typeof _ & { type }>({}, _)
   delete clone.type
   return clone
