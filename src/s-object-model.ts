@@ -1,15 +1,3 @@
-type WhereAndOr<SObject> = {
-  /**
-   * AND
-   */
-  and?: Where<SObject>
-
-  /**
-   * OR
-   */
-  or?: Where<SObject>
-}
-
 export type WhereCondition<T> = {
   /**
    * =
@@ -57,21 +45,37 @@ export type WhereCondition<T> = {
   nin?: T[]
 }
 
-export type Where<SObject> = WhereAndOr<SObject> & { [Field in keyof SObject]: WhereCondition<SObject[Field]> }
+export type WhereMore<ObjectType> = {
+  /**
+   * AND
+   */
+  and?: Where<ObjectType>
+
+  /**
+   * OR
+   */
+  or?: Where<ObjectType>
+}
+
+export type WhereObjectType<ObjectType> = {
+  [Field in keyof ObjectType]?: WhereCondition<ObjectType[Field]>
+}
+
+export type Where<ObjectType> = WhereMore<ObjectType> & WhereObjectType<ObjectType>
 
 export type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 
-export type Order<SObject> = { [Field in keyof SObject]: OrderType }[]
+export type Order<ObjectType> = { [Field in keyof ObjectType]: OrderType }[]
 
-export type Criteria<SObject> = {
-  where?: Where<SObject>
-  orderby?: Order<SObject>
+export type Criteria<ObjectType> = {
+  where?: Where<ObjectType>
+  orderby?: Order<ObjectType>
   limit?: number
   offset?: number
 }
 
-export type RemoteObjectRecord<SObject> = {
-  get: (field_name: keyof SObject) => any
+export type RemoteObjectRecord<ObjectType> = {
+  get<Field extends keyof ObjectType>(field_name: keyof ObjectType): ObjectType[Field]
   _fields: {
     [field_name: string]: {
       type: string
@@ -84,25 +88,25 @@ type RemotingEvent = {
   action: string
   method: string
   ref: boolean
-  result: { [key: string]: any }
+  result: { [key: string]: unknown }
   status: boolean
   statusCode: number
   tid: number
   type: string
 }
 
-export type RemoteObject = {
-  retrieve<SObject>(
-    criteria: Criteria<SObject>,
-    result: (error: Error | undefined, records: RemoteObjectRecord<SObject>[]) => void,
+export type RemoteObject<ObjectType> = {
+  retrieve(
+    criteria: Criteria<ObjectType>,
+    result: (error: Error | undefined, records: RemoteObjectRecord<ObjectType>[]) => void,
   ): void
-  create(
-    props: { [field_name: string]: any },
+  create<Field extends keyof ObjectType>(
+    props: { [field_name: string]: ObjectType[Field] },
     result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
   ): void
-  update(
+  update<Field extends keyof ObjectType>(
     ids: string[],
-    props: { [field_name: string]: any },
+    props: { [field_name: string]: ObjectType[Field] },
     result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
   ): void
   del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void): void
