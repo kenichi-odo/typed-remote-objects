@@ -103,7 +103,21 @@ export function fetchAll<ObjectName extends string, ObjectType>(
   })
 }
 
-export async function create<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
+export async function fetchOne<ObjectName extends string, ObjectType>(
+  object_name: ObjectName,
+  criteria: Criteria<ObjectType> | undefined = {},
+) {
+  criteria.limit = 1
+
+  const _ = await fetchAll<ObjectName, ObjectType>(object_name, criteria).catch((_: Error) => _)
+  if (_ instanceof Error) {
+    return Promise.reject(_)
+  }
+
+  return _[0]
+}
+
+export function ins<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
   props: TROObject<ObjectName, ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TROObject<ObjectName, ObjectType> : void> {
@@ -148,11 +162,7 @@ export async function create<ObjectName extends string, ObjectType, Fetch extend
   })
 }
 
-export async function update<
-  ObjectName extends string,
-  ObjectType extends { Id: string },
-  Fetch extends true | false = true
->(
+export function upd<ObjectName extends string, ObjectType extends { Id: string }, Fetch extends true | false = true>(
   props: TROObject<ObjectName, ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TROObject<ObjectName, ObjectType> : void> {
@@ -198,14 +208,14 @@ export async function update<
   })
 }
 
-export async function remove<ObjectName extends string, ObjectType extends { Id: string }>(
+export function del<ObjectName extends string, ObjectType extends { Id: string }>(
   props: TROObject<ObjectName, ObjectType>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const clone_props = deepmerge<typeof props>({}, props)
 
     try {
-      s_object_models[clone_props.type]!.remote_object.del(clone_props.Id!, async error => {
+      s_object_models[clone_props.type]!.remote_object.del(clone_props.Id!, error => {
         if (error != null) {
           reject(new TROError(clone_props.type, error.message, { props, clone_props }))
           return
