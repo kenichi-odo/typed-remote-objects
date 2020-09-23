@@ -59,6 +59,6 @@
     "pretty": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ESNext"
+    "target": "ES5"
   }
 }
