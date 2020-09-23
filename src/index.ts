@@ -5,6 +5,8 @@ import deepmerge from 'deepmerge'
 
 declare const SObjectModel: { [object_name: string]: new <ObjectType>() => RemoteObject<ObjectType> }
 
+export { Where }
+
 export type TROTransaction<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
@@ -113,7 +115,7 @@ export function fetchAll<ObjectName extends string, ObjectType>(
 export async function fetchOne<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
   criteria: Criteria<ObjectType> | undefined = {},
-) {
+): Promise<TRORecord<ObjectName, ObjectType> | undefined> {
   criteria.limit = 1
 
   const _ = await fetchAll<ObjectName, ObjectType>(object_name, criteria).catch((_: Error) => _)
