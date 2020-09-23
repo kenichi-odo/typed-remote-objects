@@ -5,16 +5,14 @@ import deepmerge from 'deepmerge'
 
 declare const SObjectModel: { [object_name: string]: new <ObjectType>() => RemoteObject<ObjectType> }
 
-export type TROTransaction<ObjectName, ObjectType> = { type: ObjectName } & {
+export type TROTransaction<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
     : ObjectType[FieldName] | null
 }
 
-export type TRORecord<ObjectName, ObjectType> = {
-  [FieldName in keyof TROTransaction<ObjectName, ObjectType>]: NonNullable<
-    TROTransaction<ObjectName, ObjectType>[FieldName]
-  >
+export type TRORecord<ObjectName, ObjectType> = { type: ObjectName } & {
+  [FieldName in keyof TROTransaction<ObjectType>]: NonNullable<TROTransaction<ObjectType>[FieldName]>
 }
 
 export class TROError extends CustomError {
@@ -127,7 +125,8 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
 }
 
 export function ins<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
-  props: TROTransaction<ObjectName, ObjectType>,
+  object_name: ObjectName,
+  props: TROTransaction<ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
   return new Promise((resolve, reject) => {
@@ -141,11 +140,11 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
     })
 
     try {
-      ;(s_object_models[clone_props.type] as SObjectModel<ObjectType>).remote_object.create(
+      ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.create(
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
         async (error, ids) => {
           if (ids.length === 0) {
-            reject(new TROError(clone_props.type, error!.message, { props, clone_props }))
+            reject(new TROError(object_name, error!.message, { props, clone_props }))
             return
           }
 
@@ -154,7 +153,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
             return
           }
 
-          const _ = await fetchAll<ObjectName, ObjectType>(clone_props.type, {
+          const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
             where: ({ Id: { eq: ids[0] } } as unknown) as Where<ObjectType>,
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
@@ -166,13 +165,14 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
         },
       )
     } catch (error) {
-      reject(new TROError(clone_props.type, error.message, { props, clone_props }))
+      reject(new TROError(object_name, error.message, { props, clone_props }))
     }
   })
 }
 
 export function upd<ObjectName extends string, ObjectType extends { Id: string }, Fetch extends true | false = true>(
-  props: TROTransaction<ObjectName, ObjectType>,
+  object_name: ObjectName,
+  props: TROTransaction<ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
   return new Promise((resolve, reject) => {
@@ -186,12 +186,12 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
     })
 
     try {
-      ;(s_object_models[clone_props.type] as SObjectModel<ObjectType>).remote_object.update(
+      ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.update(
         [clone_props.Id!],
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
         async error => {
           if (error != null) {
-            reject(new TROError(clone_props.type, error.message, { props, clone_props }))
+            reject(new TROError(object_name, error.message, { props, clone_props }))
             return
           }
 
@@ -200,7 +200,7 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
             return
           }
 
-          const _ = await fetchAll<ObjectName, ObjectType>(clone_props.type, {
+          const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
             where: { Id: { eq: clone_props.Id } } as Where<ObjectType>,
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
@@ -212,28 +212,24 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
         },
       )
     } catch (error) {
-      reject(new TROError(clone_props.type, error.message, { props, clone_props }))
+      reject(new TROError(object_name, error.message, { props, clone_props }))
     }
   })
 }
 
-export function del<ObjectName extends string, ObjectType extends { Id: string }>(
-  props: TROTransaction<ObjectName, ObjectType>,
-): Promise<void> {
+export function del<ObjectName extends string>(object_name: ObjectName, id: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const clone_props = deepmerge<typeof props>({}, props)
-
     try {
-      s_object_models[clone_props.type]!.remote_object.del(clone_props.Id!, error => {
+      s_object_models[object_name]!.remote_object.del(id, error => {
         if (error != null) {
-          reject(new TROError(clone_props.type, error.message, { props, clone_props }))
+          reject(new TROError(object_name, error.message, { id }))
           return
         }
 
         resolve()
       })
     } catch (error) {
-      reject(new TROError(clone_props.type, error.message, { props, clone_props }))
+      reject(new TROError(object_name, error.message, { id }))
     }
   })
 }
