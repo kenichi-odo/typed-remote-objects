@@ -40,7 +40,10 @@ type SObjectModel<ObjectType> = {
 }
 const s_object_models: { [object_name: string]: SObjectModel<unknown> } = {}
 
-export function init(args: { time_zone_offset?: number; un_accessible_fields: { object_name: string; fields: [] }[] }) {
+export function init(args: {
+  time_zone_offset?: number
+  un_accessible_fields: { object_name: string; fields: string[] }[]
+}) {
   time_zone_offset = args.time_zone_offset ?? 9
   args.un_accessible_fields.forEach(_ => {
     const som = new SObjectModel[_.object_name]()
