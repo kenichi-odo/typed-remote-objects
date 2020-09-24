@@ -13,7 +13,7 @@ export type TROTransaction<ObjectType> = {
     : ObjectType[FieldName] | null
 }
 
-export type TRORecord<ObjectName, ObjectType> = { type: ObjectName } & {
+export type TRORecord<ObjectName, ObjectType> = { type: ObjectName; Id: string } & {
   [FieldName in keyof TROTransaction<ObjectType>]: NonNullable<TROTransaction<ObjectType>[FieldName]>
 }
 
@@ -222,7 +222,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
 
 export function upd<ObjectName extends string, ObjectType extends { Id: string }, Fetch extends true | false = true>(
   object_name: ObjectName,
-  props: TROTransaction<ObjectType>,
+  props: TROTransaction<ObjectType> & { Id: string },
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
   const clone_props = deepmerge<typeof props>({}, props)
