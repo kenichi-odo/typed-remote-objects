@@ -7,19 +7,14 @@ declare const SObjectModel: { [object_name: string]: new <ObjectType>() => Remot
 
 export { Where }
 
-type InsertTransaction<ObjectType> = {
+export type Transaction<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
     : ObjectType[FieldName] | null
 }
 
-export type Transaction<ObjectType> = {
-  insert: Omit<InsertTransaction<ObjectType>, 'type'>
-  update: { Id: string } & Omit<InsertTransaction<ObjectType>, 'type'>
-}
-
 export type Record<ObjectName, ObjectType> = { type: ObjectName } & {
-  [FieldName in keyof Transaction<ObjectType>['update']]: NonNullable<Transaction<ObjectType>['update'][FieldName]>
+  [FieldName in keyof Transaction<ObjectType>]: NonNullable<Transaction<ObjectType>[FieldName]>
 }
 
 export class TROError extends CustomError {
@@ -177,7 +172,7 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
 
 export function ins<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
   object_name: ObjectName,
-  props: Transaction<ObjectType>['insert'],
+  props: Transaction<ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? Record<ObjectName, ObjectType> : void> {
   const clone_props = deepmerge<typeof props>({}, props)
@@ -225,9 +220,10 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
   })
 }
 
-export function upd<ObjectName extends string, ObjectType extends { Id: string }, Fetch extends true | false = true>(
+export function upd<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
   object_name: ObjectName,
-  props: Transaction<ObjectType>['update'],
+  id: string,
+  props: Transaction<ObjectType>,
   options?: { fetch: Fetch },
 ): Promise<Fetch extends true ? Record<ObjectName, ObjectType> : void> {
   const clone_props = deepmerge<typeof props>({}, props)
@@ -242,7 +238,7 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
   return new Promise((resolve, reject) => {
     try {
       ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.update(
-        [clone_props.Id!],
+        [id],
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
         async error => {
           if (error != null) {
@@ -256,7 +252,7 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
           }
 
           const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
-            criteria: { where: { Id: { eq: clone_props.Id } } as Where<ObjectType> },
+            criteria: { where: ({ Id: { eq: id } } as unknown) as Where<ObjectType> },
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
             reject(_)
@@ -272,7 +268,7 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
   })
 }
 
-export function del<ObjectName extends string>(object_name: ObjectName, id: string): Promise<void> {
+export function del(object_name: string, id: string): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       s_object_models[object_name]!.remote_object.del(id, error => {
@@ -287,18 +283,4 @@ export function del<ObjectName extends string>(object_name: ObjectName, id: stri
       reject(new TROError(object_name, error.message, { id }))
     }
   })
-}
-
-export function toTransaction<ObjectName, ObjectType, T extends keyof Transaction<ObjectType>>(
-  _: Record<ObjectName, ObjectType>,
-  type: T,
-): Transaction<ObjectType>[T] {
-  const clone = deepmerge<typeof _ & { type; Id }>({}, _)
-
-  delete clone.type
-  if (type === 'insert') {
-    delete clone.Id
-  }
-
-  return clone
 }
