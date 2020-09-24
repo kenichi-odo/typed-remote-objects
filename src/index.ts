@@ -7,14 +7,19 @@ declare const SObjectModel: { [object_name: string]: new <ObjectType>() => Remot
 
 export { Where }
 
-export type TROTransaction<ObjectType> = {
+type InsertTransaction<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
     : ObjectType[FieldName] | null
 }
 
-export type TRORecord<ObjectName, ObjectType> = { type: ObjectName; Id: string } & {
-  [FieldName in keyof TROTransaction<ObjectType>]: NonNullable<TROTransaction<ObjectType>[FieldName]>
+export type Transaction<ObjectType> = {
+  insert: Omit<InsertTransaction<ObjectType>, 'type'>
+  update: { Id: string } & Omit<InsertTransaction<ObjectType>, 'type'>
+}
+
+export type Record<ObjectName, ObjectType> = { type: ObjectName } & {
+  [FieldName in keyof Transaction<ObjectType>['update']]: NonNullable<Transaction<ObjectType>['update'][FieldName]>
 }
 
 export class TROError extends CustomError {
@@ -60,7 +65,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         size?: number
       }
     | undefined = { criteria: {}, size: 2000 },
-): Promise<TRORecord<ObjectName, ObjectType>[]> {
+): Promise<Record<ObjectName, ObjectType>[]> {
   const clone_options = deepmerge<typeof options>({}, options)
   if (clone_options.criteria == null) {
     clone_options.criteria = {}
@@ -71,7 +76,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
     let size = clone_options.size ?? 2000
     let offset = 0
 
-    let results: TRORecord<ObjectName, ObjectType>[] = []
+    let results: Record<ObjectName, ObjectType>[] = []
     while (size > 0) {
       if (size > 100) {
         clone_criteria.limit = 100
@@ -140,7 +145,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
 
           resolve(
             records.map(record => {
-              const result = { type: object_name } as TRORecord<ObjectName, ObjectType>
+              const result = { type: object_name } as Record<ObjectName, ObjectType>
               Object.keys(record._fields).forEach(key => {
                 result[record._fields[key].shorthand || key] = record.get(key as keyof ObjectType)
               })
@@ -158,7 +163,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
 export async function fetchOne<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
   criteria: Criteria<ObjectType> | undefined = {},
-): Promise<TRORecord<ObjectName, ObjectType> | undefined> {
+): Promise<Record<ObjectName, ObjectType> | undefined> {
   const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
     criteria: deepmerge<typeof criteria>({}, criteria),
     size: 1,
@@ -172,9 +177,9 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
 
 export function ins<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
   object_name: ObjectName,
-  props: TROTransaction<ObjectType>,
+  props: Transaction<ObjectType>['insert'],
   options?: { fetch: Fetch },
-): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
+): Promise<Fetch extends true ? Record<ObjectName, ObjectType> : void> {
   const clone_props = deepmerge<typeof props>({}, props)
 
   Object.keys(clone_props).forEach(_ => {
@@ -211,7 +216,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
             return
           }
 
-          resolve(_[0] as Fetch extends true ? TRORecord<ObjectName, ObjectType> : void)
+          resolve(_[0] as Fetch extends true ? Record<ObjectName, ObjectType> : void)
         },
       )
     } catch (error) {
@@ -222,9 +227,9 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
 
 export function upd<ObjectName extends string, ObjectType extends { Id: string }, Fetch extends true | false = true>(
   object_name: ObjectName,
-  props: TROTransaction<ObjectType> & { Id: string },
+  props: Transaction<ObjectType>['update'],
   options?: { fetch: Fetch },
-): Promise<Fetch extends true ? TRORecord<ObjectName, ObjectType> : void> {
+): Promise<Fetch extends true ? Record<ObjectName, ObjectType> : void> {
   const clone_props = deepmerge<typeof props>({}, props)
 
   Object.keys(clone_props).forEach(_ => {
@@ -258,7 +263,7 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
             return
           }
 
-          resolve(_[0] as Fetch extends true ? TRORecord<ObjectName, ObjectType> : void)
+          resolve(_[0] as Fetch extends true ? Record<ObjectName, ObjectType> : void)
         },
       )
     } catch (error) {
@@ -284,10 +289,16 @@ export function del<ObjectName extends string>(object_name: ObjectName, id: stri
   })
 }
 
-export function toTransaction<ObjectName, ObjectType>(
-  _: TRORecord<ObjectName, ObjectType>,
-): TROTransaction<ObjectType> {
-  const clone = deepmerge<typeof _ & { type }>({}, _)
+export function toTransaction<ObjectName, ObjectType, T extends keyof Transaction<ObjectType>>(
+  _: Record<ObjectName, ObjectType>,
+  type: T,
+): Transaction<ObjectType>[T] {
+  const clone = deepmerge<typeof _ & { type; Id }>({}, _)
+
   delete clone.type
+  if (type === 'insert') {
+    delete clone.Id
+  }
+
   return clone
 }
