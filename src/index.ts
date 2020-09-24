@@ -13,7 +13,7 @@ export type Transaction<ObjectType> = {
     : ObjectType[FieldName] | null
 }
 
-export type Record<ObjectName, ObjectType> = { type: ObjectName } & {
+export type Record<ObjectName, ObjectType> = { type: ObjectName; Id: string } & {
   [FieldName in keyof Transaction<ObjectType>]: NonNullable<Transaction<ObjectType>[FieldName]>
 }
 
