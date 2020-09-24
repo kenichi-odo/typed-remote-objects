@@ -52,11 +52,48 @@ export function init(args: {
   })
 }
 
-export function fetchAll<ObjectName extends string, ObjectType>(
+export async function fetchAll<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
   criteria: Criteria<ObjectType> | undefined = {},
+  size: number | undefined = 2000,
 ): Promise<TRORecord<ObjectName, ObjectType>[]> {
   const clone_criteria = deepmerge<typeof criteria>({}, criteria)
+
+  if (clone_criteria.limit == null && clone_criteria.offset == null) {
+    let offset = 0
+    if (size == null) {
+      size = 2000
+    }
+
+    let results: TRORecord<ObjectName, ObjectType>[] = []
+    while (size > 0) {
+      if (size > 100) {
+        criteria.limit = 100
+        size -= 100
+      } else {
+        criteria.limit = size
+        size = 0
+      }
+
+      if (offset !== 0) {
+        criteria.offset = offset
+      }
+
+      const records = await fetchAll(object_name, criteria).catch((_: Error) => _)
+      if (records instanceof Error) {
+        return Promise.reject(records)
+      }
+
+      if (records.length === 0) {
+        break
+      }
+
+      results = results.concat(records)
+      offset += 100
+    }
+
+    return Promise.resolve(results)
+  }
 
   const adjustDate = (where: NonNullable<typeof clone_criteria>['where']) => {
     if (where == null) {
