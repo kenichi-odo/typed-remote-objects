@@ -54,32 +54,38 @@ export function init(args: {
 
 export async function fetchAll<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
-  criteria: Criteria<ObjectType> | undefined = {},
-  size: number | undefined = 2000,
+  options:
+    | {
+        criteria?: Criteria<ObjectType>
+        size?: number
+      }
+    | undefined = { criteria: {}, size: 2000 },
 ): Promise<TRORecord<ObjectName, ObjectType>[]> {
-  const clone_criteria = deepmerge<typeof criteria>({}, criteria)
+  const clone_options = deepmerge<typeof options>({}, options)
+  if (clone_options.criteria == null) {
+    clone_options.criteria = {}
+  }
 
+  const clone_criteria = deepmerge<typeof clone_options.criteria>({}, clone_options.criteria)!
   if (clone_criteria.limit == null && clone_criteria.offset == null) {
+    let size = clone_options.size ?? 2000
     let offset = 0
-    if (size == null) {
-      size = 2000
-    }
 
     let results: TRORecord<ObjectName, ObjectType>[] = []
     while (size > 0) {
       if (size > 100) {
-        criteria.limit = 100
+        clone_criteria.limit = 100
         size -= 100
       } else {
-        criteria.limit = size
+        clone_criteria.limit = size
         size = 0
       }
 
       if (offset !== 0) {
-        criteria.offset = offset
+        clone_criteria.offset = offset
       }
 
-      const records = await fetchAll(object_name, criteria).catch((_: Error) => _)
+      const records = await fetchAll(object_name, { criteria: clone_criteria }).catch((_: Error) => _)
       if (records instanceof Error) {
         return Promise.reject(records)
       }
@@ -128,7 +134,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         clone_criteria,
         (error, records) => {
           if (error != null) {
-            reject(new TROError(object_name, error.message, { criteria, clone_criteria }))
+            reject(new TROError(object_name, error.message, { options, clone_options }))
             return
           }
 
@@ -144,7 +150,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         },
       )
     } catch (error) {
-      reject(new TROError(object_name, error.message, { criteria, clone_criteria }))
+      reject(new TROError(object_name, error.message, { options, clone_options }))
     }
   })
 }
@@ -153,10 +159,10 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
   object_name: ObjectName,
   criteria: Criteria<ObjectType> | undefined = {},
 ): Promise<TRORecord<ObjectName, ObjectType> | undefined> {
-  const clone_criteria = deepmerge<typeof criteria>({}, criteria)
-  clone_criteria.limit = 1
-
-  const _ = await fetchAll<ObjectName, ObjectType>(object_name, clone_criteria).catch((_: Error) => _)
+  const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
+    criteria: deepmerge<typeof criteria>({}, criteria),
+    size: 1,
+  }).catch((_: Error) => _)
   if (_ instanceof Error) {
     return Promise.reject(_)
   }
@@ -194,7 +200,11 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
           }
 
           const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
-            where: ({ Id: { eq: ids[0] } } as unknown) as Where<ObjectType>,
+            criteria: {
+              where: ({
+                Id: { eq: ids[0] },
+              } as unknown) as Where<ObjectType>,
+            },
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
             reject(_)
@@ -241,7 +251,7 @@ export function upd<ObjectName extends string, ObjectType extends { Id: string }
           }
 
           const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
-            where: { Id: { eq: clone_props.Id } } as Where<ObjectType>,
+            criteria: { where: { Id: { eq: clone_props.Id } } as Where<ObjectType> },
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
             reject(_)
