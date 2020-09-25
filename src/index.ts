@@ -5,6 +5,8 @@ import deepmerge from 'deepmerge'
 
 declare const SObjectModel: { [object_name: string]: new <ObjectType>() => RemoteObject<ObjectType> }
 
+export { Where }
+
 type TransactionCore<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
