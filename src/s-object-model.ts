@@ -61,7 +61,9 @@ export type WhereObjectType<ObjectType> = {
   [Field in keyof ObjectType]?: WhereCondition<ObjectType[Field]>
 }
 
-export type Where<ObjectType> = WhereMore<ObjectType> & WhereObjectType<ObjectType>
+type WhereCore<ObjectType> = WhereMore<ObjectType> & WhereObjectType<ObjectType>
+
+export type Where<ObjectType> = { [K in keyof WhereCore<ObjectType>]: WhereCore<ObjectType>[K] }
 
 export type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 

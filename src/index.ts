@@ -5,16 +5,20 @@ import deepmerge from 'deepmerge'
 
 declare const SObjectModel: { [object_name: string]: new <ObjectType>() => RemoteObject<ObjectType> }
 
-export { Where }
-
-export type Transaction<ObjectType> = {
+type TransactionCore<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
     : ObjectType[FieldName] | null
 }
 
-export type Record<ObjectName, ObjectType> = { type: ObjectName; Id: string } & {
+export type Transaction<ObjectType> = { [K in keyof TransactionCore<ObjectType>]: TransactionCore<ObjectType>[K] }
+
+type RecordCore<ObjectName, ObjectType> = { type: ObjectName; Id: string } & {
   [FieldName in keyof Transaction<ObjectType>]: NonNullable<Transaction<ObjectType>[FieldName]>
+}
+
+export type Record<ObjectName, ObjectType> = {
+  [K in keyof RecordCore<ObjectName, ObjectType>]: RecordCore<ObjectName, ObjectType>[K]
 }
 
 export class TROError extends CustomError {
