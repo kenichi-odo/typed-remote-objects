@@ -67,7 +67,7 @@ export type Where<ObjectType> = { [K in keyof WhereCore<ObjectType>]: WhereCore<
 
 export type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 
-export type Order<ObjectType> = { [Field in keyof ObjectType]: OrderType }[]
+export type Order<ObjectType> = { [Field in keyof ObjectType]?: OrderType }[]
 
 export type Criteria<ObjectType> = {
   where?: Where<ObjectType>
