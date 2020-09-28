@@ -290,3 +290,11 @@ export function del(object_name: string, id: string): Promise<void> {
     }
   })
 }
+
+export function criteria<ObjectType>(_: Criteria<ObjectType>) {
+  return _
+}
+
+export function transaction<ObjectType>(_: Transaction<ObjectType>) {
+  return _
+}
