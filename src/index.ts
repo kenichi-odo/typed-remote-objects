@@ -1,6 +1,6 @@
 import { CustomError } from 'ts-custom-error'
 import { Criteria, RemoteObject, Where } from './s-object-model'
-import { setHours } from 'date-fns'
+import { addHours } from 'date-fns'
 import deepmerge from 'deepmerge'
 
 declare const SObjectModel: { [object_name: string]: new <ObjectType>() => RemoteObject<ObjectType> }
@@ -123,12 +123,12 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
       const operator_key = Object.keys(w)[0]
       const value = w[operator_key]
       if (value instanceof Date) {
-        w[operator_key] = setHours(value, -time_zone_offset)
+        w[operator_key] = addHours(value, -time_zone_offset)
         return
       }
 
       if (Array.isArray(value)) {
-        w[operator_key] = value.map(v => (v instanceof Date ? setHours(v, -time_zone_offset) : v))
+        w[operator_key] = value.map(v => (v instanceof Date ? addHours(v, -time_zone_offset) : v))
       }
     })
   }
@@ -186,7 +186,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
   Object.keys(clone_props).forEach(_ => {
     const p = clone_props[_]
     if (p instanceof Date) {
-      clone_props[_] = setHours(p, -time_zone_offset)
+      clone_props[_] = addHours(p, -time_zone_offset)
     }
   })
 
@@ -237,7 +237,7 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
   Object.keys(clone_props).forEach(_ => {
     const p = clone_props[_]
     if (p instanceof Date) {
-      clone_props[_] = setHours(p, -time_zone_offset)
+      clone_props[_] = addHours(p, -time_zone_offset)
     }
   })
 
