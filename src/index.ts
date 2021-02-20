@@ -49,7 +49,7 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
   props: SObject
   options?: UpsertOptions<keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>
 }) => {
-  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve, reject) => {
+  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve: Function, reject) => {
     Object.keys(props).forEach(_ => {
       const p = props[_]
       if (p instanceof Date) {
@@ -105,7 +105,7 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
   props: SObject
   options?: UpsertOptions<keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>
 }) => {
-  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve, reject) => {
+  return new Promise<TRORecord<ObjectLiteral, SObject, Extensions> | undefined>((resolve: Function, reject) => {
     const id = props['Id']
     Object.keys(props).forEach(_ => {
       const p = props[_]
