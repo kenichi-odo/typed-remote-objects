@@ -190,7 +190,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
     }
   })
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve: Function, reject) => {
     try {
       ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.create(
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
@@ -241,7 +241,7 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
     }
   })
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve: Function, reject) => {
     try {
       ;(s_object_models[object_name] as SObjectModel<ObjectType>).remote_object.update(
         [id],
