@@ -21,44 +21,29 @@ const troErrorFactory = (_: { object_name: string; message: string; attributes?:
   return new TROError(_.object_name, _.message, _.attributes)
 }
 
-const _s_object_models: { [object_name: string]: RemoteObject | undefined } = {}
-const _getSObjectModel = <SObject extends object>({
-  object_name,
-  un_accessible_fields,
-}: {
-  object_name: string
-  un_accessible_fields: (keyof SObject)[]
-}): RemoteObject => {
-  const som = _s_object_models[object_name]
-  if (som == null) {
-    if (SObjectModel[object_name] == null) {
-      throw troErrorFactory({
-        object_name,
-        message: `Object name \`${object_name}\` is unknown. Please check the remote object component definition on Visualforce.`,
-      })
-    }
+let time_zone_offset: number
+const s_object_models: { [object_name: string]: RemoteObject | undefined } = {}
 
-    const som = new SObjectModel[object_name]()
-    un_accessible_fields.forEach(_ => delete som._fields[_ as string])
-    _s_object_models[object_name] = som
-    return som
-  }
-
-  return _s_object_models[object_name]!
+export function init(args: {
+  time_zone_offset?: number
+  un_accessible_fields: { object_name: string; fields: string[] }[]
+}) {
+  time_zone_offset = args.time_zone_offset ?? 9
+  args.un_accessible_fields.forEach(_ => {
+    const som = new SObjectModel[_.object_name]()
+    _.fields.forEach(_ => delete som._fields[_ as string])
+    s_object_models[_.object_name] = som
+  })
 }
 
 const _create = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  time_zone_offset,
-  un_accessible_fields,
   hookExecute,
   extensions,
   props,
   options,
 }: {
   object_name: string
-  time_zone_offset: number
-  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
@@ -75,9 +60,9 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
     })
 
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { un_accessible_fields, props } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
     try {
-      _getSObjectModel({ object_name, un_accessible_fields }).create(props, async (error, ids) => {
+      s_object_models[object_name]!.create(props, async (error, ids) => {
         if (ids.length === 0) {
           throwError({ error: error! })
           return
@@ -90,8 +75,6 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
 
         const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          time_zone_offset,
-          un_accessible_fields,
           hookExecute,
           extensions,
           criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
@@ -111,16 +94,12 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
 
 const _update = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  time_zone_offset,
-  un_accessible_fields,
   hookExecute,
   extensions,
   props,
   options,
 }: {
   object_name: string
-  time_zone_offset: number
-  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
@@ -137,9 +116,9 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
       }
     })
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, un_accessible_fields, props } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, props } }))
     try {
-      _getSObjectModel({ object_name, un_accessible_fields }).update([id], props, async error => {
+      s_object_models[object_name]!.update([id], props, async error => {
         if (error != null) {
           throwError({ error })
           return
@@ -152,8 +131,6 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
 
         const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          time_zone_offset,
-          un_accessible_fields,
           hookExecute,
           extensions,
           criteria: { where: { Id: { eq: id } } as Where<SObject> },
@@ -171,20 +148,12 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
   })
 }
 
-const _delete = <SObject extends object>({
-  object_name,
-  id,
-  un_accessible_fields,
-}: {
-  object_name: string
-  id: string
-  un_accessible_fields: (keyof SObject)[]
-}) => {
+const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
   return new Promise<void>((resolve, reject) => {
     const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, un_accessible_fields } }))
+      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id } }))
     try {
-      _getSObjectModel({ object_name, un_accessible_fields }).del(id, error => {
+      s_object_models[object_name]!.del(id, error => {
         if (error != null) {
           throwError({ error })
           return
@@ -200,15 +169,11 @@ const _delete = <SObject extends object>({
 
 const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  time_zone_offset,
-  un_accessible_fields,
   hookExecute,
   extensions,
   criteria,
 }: {
   object_name: string
-  time_zone_offset: number
-  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
@@ -244,11 +209,11 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
         troErrorFactory({
           object_name,
           message: error!.message,
-          attributes: { un_accessible_fields, criteria: criteria },
+          attributes: { criteria: criteria },
         }),
       )
     try {
-      _getSObjectModel({ object_name, un_accessible_fields }).retrieve<SObject>(criteria, (error, records) => {
+      s_object_models[object_name]!.retrieve<SObject>(criteria, (error, records) => {
         if (error != null) {
           throwError({ error })
           return
@@ -279,8 +244,6 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
 
                 const ps = {
                   object_name,
-                  time_zone_offset,
-                  un_accessible_fields,
                   hookExecute,
                   extensions,
                   props: ops,
@@ -299,7 +262,7 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
               async delete() {
                 const self = this as TRORecord<ObjectLiteral, SObject, Extensions>
 
-                const ps = { object_name, id: self['Id'], un_accessible_fields }
+                const ps = { object_name, id: self['Id'] }
                 if (hookExecute == null) {
                   await _delete(ps)
                   return
@@ -346,8 +309,6 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
 
 const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  time_zone_offset,
-  un_accessible_fields,
   hookExecute,
   extensions,
   criteria,
@@ -355,8 +316,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
   options,
 }: {
   object_name: string
-  time_zone_offset: number
-  un_accessible_fields: (keyof SObject)[]
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
@@ -367,8 +326,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
     if (criteria.limit != null || criteria.offset != null) {
       const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
-        time_zone_offset,
-        un_accessible_fields,
         hookExecute,
         extensions,
         criteria,
@@ -404,8 +361,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
 
         const records = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          time_zone_offset,
-          un_accessible_fields,
           hookExecute,
           extensions,
           criteria,
@@ -444,8 +399,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
       promises.push(
         _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          time_zone_offset,
-          un_accessible_fields,
           hookExecute,
           extensions,
           criteria: Deepmerge({}, criteria),
@@ -467,14 +420,10 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
 
 const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = {}>({
   object_name,
-  time_zone_offset,
-  un_accessible_fields = [],
   extensions = {} as Extensions,
   hookExecute,
 }: {
   object_name: string
-  time_zone_offset: number
-  un_accessible_fields?: (keyof SObject)[]
   extensions?: Extensions
   hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
 }): TROInstance<ObjectLiteral, SObject, Extensions> => {
@@ -571,8 +520,6 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
 
       const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
-        time_zone_offset,
-        un_accessible_fields,
         hookExecute,
         extensions,
         criteria,
@@ -598,8 +545,6 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
 
       return await _retrieves<ObjectLiteral, SObject, Extensions>({
         object_name,
-        time_zone_offset,
-        un_accessible_fields,
         hookExecute,
         extensions,
         criteria,
@@ -611,7 +556,7 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
       props: SObject,
       options?: UpsertOptions<K>,
     ): Promise<any> {
-      const ps = { object_name, time_zone_offset, un_accessible_fields, hookExecute, extensions, props, options }
+      const ps = { object_name, hookExecute, extensions, props, options }
       if (hookExecute == null) {
         return await _create<ObjectLiteral, SObject, Extensions>(ps)
       }
@@ -630,8 +575,6 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
       ;(props as SObject & { Id: string }).Id = id
       const ps = {
         object_name,
-        time_zone_offset,
-        un_accessible_fields,
         hookExecute,
         extensions,
         props,
@@ -649,7 +592,7 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
       return _
     },
     async delete(id) {
-      const ps = { object_name, id, un_accessible_fields }
+      const ps = { object_name, id }
       if (hookExecute == null) {
         await _delete(ps)
         return
