@@ -91,10 +91,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         clone_criteria.offset = offset
       }
 
-      const records = await fetchAll(object_name, { criteria: clone_criteria }).catch((_: Error) => _)
-      if (records instanceof Error) {
-        return Promise.reject(records)
-      }
+      const records = await fetchAll(object_name, { criteria: clone_criteria })
 
       if (records.length === 0) {
         break
@@ -104,7 +101,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
       offset += 100
     }
 
-    return Promise.resolve(results)
+    return results
   }
 
   const adjustDate = (where: NonNullable<typeof clone_criteria>['where']) => {
