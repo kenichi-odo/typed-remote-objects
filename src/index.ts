@@ -8,17 +8,18 @@ import { TRORecord, TROInstance, UpsertOptions, FetchAllOptions, FetchResultType
 export { TRORecord }
 
 export class TROError extends CustomError {
-  constructor(public object_name: string, message: string, public attributes?: object) {
+  constructor(message: string, public object_name: string, public attributes?: object) {
     super(message)
   }
 
   toObject() {
-    return { object_name: this.object_name, name: this.name, message: this.message, attributes: this.attributes }
+    return {
+      attributes: this.attributes,
+      message: this.message,
+      name: this.name,
+      object_name: this.object_name,
+    }
   }
-}
-
-const troErrorFactory = (_: { object_name: string; message: string; attributes?: object }) => {
-  return new TROError(_.object_name, _.message, _.attributes)
 }
 
 let time_zone_offset: number
@@ -38,13 +39,11 @@ export function init(args: {
 
 const _create = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  hookExecute,
   extensions,
   props,
   options,
 }: {
   object_name: string
-  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
   options?: UpsertOptions<keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>
@@ -59,12 +58,10 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
       }
     })
 
-    const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { props } }))
     try {
       s_object_models[object_name]!.create(props, async (error, ids) => {
         if (ids.length === 0) {
-          throwError({ error: error! })
+          reject(new TROError(error!.message, object_name, { props }))
           return
         }
 
@@ -75,7 +72,6 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
 
         const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          hookExecute,
           extensions,
           criteria: { where: { Id: { eq: ids[0] } } as Where<SObject> },
         }).catch((_: Error) => _)
@@ -87,20 +83,20 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
         resolve(_[0])
       })
     } catch (error) {
-      throwError({ error })
+      reject(new TROError(error.message, object_name, { props }))
     }
+  }).catch((_: TROError) => {
+    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
 const _update = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  hookExecute,
   extensions,
   props,
   options,
 }: {
   object_name: string
-  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   props: SObject
   options?: UpsertOptions<keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>
@@ -115,12 +111,11 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
         props[_] = adjust_date
       }
     })
-    const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id, props } }))
+
     try {
       s_object_models[object_name]!.update([id], props, async error => {
         if (error != null) {
-          throwError({ error })
+          reject(new TROError(error.message, object_name, { id, props }))
           return
         }
 
@@ -131,7 +126,6 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
 
         const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          hookExecute,
           extensions,
           criteria: { where: { Id: { eq: id } } as Where<SObject> },
         }).catch((_: Error) => _)
@@ -143,38 +137,38 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
         resolve(_[0])
       })
     } catch (error) {
-      throwError({ error })
+      reject(new TROError(error.message, object_name, { id, props }))
     }
+  }).catch((_: TROError) => {
+    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
 const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
   return new Promise<void>((resolve, reject) => {
-    const throwError = ({ error }: { error: Error }) =>
-      reject(troErrorFactory({ object_name, message: error!.message, attributes: { id } }))
     try {
       s_object_models[object_name]!.del(id, error => {
         if (error != null) {
-          throwError({ error })
+          reject(new TROError(error.message, object_name, { id }))
           return
         }
 
         resolve()
       })
     } catch (error) {
-      throwError({ error })
+      reject(new TROError(error.message, object_name, { id }))
     }
+  }).catch((_: TROError) => {
+    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
 const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  hookExecute,
   extensions,
   criteria,
 }: {
   object_name: string
-  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
 }) => {
@@ -204,18 +198,10 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
       })
     }
 
-    const throwError = ({ error }: { error: Error }) =>
-      reject(
-        troErrorFactory({
-          object_name,
-          message: error!.message,
-          attributes: { criteria: criteria },
-        }),
-      )
     try {
       s_object_models[object_name]!.retrieve<SObject>(criteria, (error, records) => {
         if (error != null) {
-          throwError({ error })
+          reject(new TROError(error!.message, object_name, { criteria: criteria }))
           return
         }
 
@@ -242,34 +228,19 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                   ops[_ as string] = self[_]
                 })
 
-                const ps = {
+                return await _update({
                   object_name,
-                  hookExecute,
                   extensions,
                   props: ops,
                   options,
-                }
-                if (hookExecute == null) {
-                  return await _update(ps)
-                }
-
-                let _: TRORecord<ObjectLiteral, SObject, Extensions> | undefined
-                hookExecute('update', async () => {
-                  _ = await _update(ps)
+                }).catch((_: TROError) => {
+                  throw new TROError(_.message, _.object_name, _.attributes)
                 })
-                return _
               },
               async delete() {
                 const self = this as TRORecord<ObjectLiteral, SObject, Extensions>
-
-                const ps = { object_name, id: self['Id'] }
-                if (hookExecute == null) {
-                  await _delete(ps)
-                  return
-                }
-
-                hookExecute('delete', async () => {
-                  await _delete(ps)
+                await _delete({ object_name, id: self['Id'] }).catch((_: TROError) => {
+                  throw new TROError(_.message, _.object_name, _.attributes)
                 })
               },
               toObject() {
@@ -302,21 +273,21 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
         )
       })
     } catch (error) {
-      throwError({ error })
+      reject(new TROError(error!.message, object_name, { criteria: criteria }))
     }
+  }).catch((_: TROError) => {
+    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
 const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
-  hookExecute,
   extensions,
   criteria,
   size,
   options,
 }: {
   object_name: string
-  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
   extensions: Extensions
   criteria: Criteria<SObject>
   size?: number
@@ -326,7 +297,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
     if (criteria.limit != null || criteria.offset != null) {
       const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
-        hookExecute,
         extensions,
         criteria,
       }).catch((_: Error) => _)
@@ -361,7 +331,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
 
         const records = await _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          hookExecute,
           extensions,
           criteria,
         }).catch((_: Error) => _)
@@ -399,7 +368,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
       promises.push(
         _retrieve<ObjectLiteral, SObject, Extensions>({
           object_name,
-          hookExecute,
           extensions,
           criteria: Deepmerge({}, criteria),
         }),
@@ -415,17 +383,17 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
     }
 
     resolve(awaits.flat())
+  }).catch((_: TROError) => {
+    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
 const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = {}>({
   object_name,
   extensions = {} as Extensions,
-  hookExecute,
 }: {
   object_name: string
   extensions?: Extensions
-  hookExecute?: (type: 'insert' | 'update' | 'delete', execute: () => Promise<void>) => Promise<void>
 }): TROInstance<ObjectLiteral, SObject, Extensions> => {
   return {
     _wheres: {} as Where<SObject>,
@@ -520,13 +488,11 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
 
       const _ = await _retrieve<ObjectLiteral, SObject, Extensions>({
         object_name,
-        hookExecute,
         extensions,
         criteria,
-      }).catch((_: Error) => _)
-      if (_ instanceof Error) {
-        return Promise.reject(_)
-      }
+      }).catch((_: TROError) => {
+        throw new TROError(_.message, _.object_name, _.attributes)
+      })
 
       return _.length === 0 ? undefined : _[0]
     },
@@ -545,27 +511,23 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
 
       return await _retrieves<ObjectLiteral, SObject, Extensions>({
         object_name,
-        hookExecute,
         extensions,
         criteria,
         size: this._size,
         options,
+      }).catch((_: TROError) => {
+        throw new TROError(_.message, _.object_name, _.attributes)
       })
     },
     async insert<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
       props: SObject,
       options?: UpsertOptions<K>,
     ): Promise<any> {
-      const ps = { object_name, hookExecute, extensions, props, options }
-      if (hookExecute == null) {
-        return await _create<ObjectLiteral, SObject, Extensions>(ps)
-      }
-
-      let _: unknown
-      await hookExecute('insert', async () => {
-        _ = await _create<ObjectLiteral, SObject, Extensions>(ps)
-      })
-      return _
+      return await _create<ObjectLiteral, SObject, Extensions>({ object_name, extensions, props, options }).catch(
+        (_: TROError) => {
+          throw new TROError(_.message, _.object_name, _.attributes)
+        },
+      )
     },
     async update<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
       id: string,
@@ -573,33 +535,19 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
       options?: UpsertOptions<K>,
     ): Promise<any> {
       ;(props as SObject & { Id: string }).Id = id
-      const ps = {
+
+      return await _update({
         object_name,
-        hookExecute,
         extensions,
         props,
         options,
-      }
-
-      if (hookExecute == null) {
-        return await _update(ps)
-      }
-
-      let _: unknown
-      await hookExecute('update', async () => {
-        _ = await _update(ps)
+      }).catch((_: TROError) => {
+        throw new TROError(_.message, _.object_name, _.attributes)
       })
-      return _
     },
     async delete(id) {
-      const ps = { object_name, id }
-      if (hookExecute == null) {
-        await _delete(ps)
-        return
-      }
-
-      await hookExecute('delete', async () => {
-        await _delete(ps)
+      await _delete({ object_name, id }).catch((_: TROError) => {
+        throw new TROError(_.message, _.object_name, _.attributes)
       })
     },
   }

@@ -2,7 +2,7 @@
   "author": "Kenichi Odo <kenichi.odo@icloud.com>",
   "devDependencies": {
     "prettier": "2.2.1",
-    "typescript": "4.1.5"
+    "typescript": "4.2.3"
   },
   "dependencies": {
     "deepmerge": "4.2.2",
@@ -40,5 +40,5 @@
   },
   "sideEffects": false,
   "types": "./module/types/index.d.ts",
-  "version": "2.5.0"
+  "version": "2.6.0"
 }
