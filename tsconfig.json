@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "alwaysStrict": true,
     "declaration": true,
     "declarationDir": "./module/types",
     "declarationMap": true,
@@ -53,8 +54,6 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false,
     "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "outDir": "./module",
     "pretty": true,
     "sourceMap": true,
