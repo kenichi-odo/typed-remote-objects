@@ -91,10 +91,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         clone_criteria.offset = offset
       }
 
-      const records = await fetchAll(object_name, { criteria: clone_criteria }).catch((_: TROError) => {
-        throw new TROError(_.message, _.object_name, _.attributes)
-      })
-
+      const records = await fetchAll(object_name, { criteria: clone_criteria })
       if (records.length === 0) {
         break
       }
@@ -157,8 +154,6 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
     } catch (error) {
       reject(new TROError(error.message, object_name, { options, clone_options }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -169,10 +164,7 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
   const result = await fetchAll<ObjectName, ObjectType>(object_name, {
     criteria: deepmerge<typeof criteria>({}, criteria),
     size: 1,
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
-
   return result[0]
 }
 
@@ -223,8 +215,6 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
     } catch (error) {
       reject(new TROError(error.message, object_name, { props, clone_props }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -273,8 +263,6 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
     } catch (error) {
       reject(new TROError(error.message, object_name, { props, clone_props }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -292,8 +280,6 @@ export function del(object_name: string, id: string) {
     } catch (error) {
       reject(new TROError(error.message, object_name, { id }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
