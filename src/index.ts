@@ -85,8 +85,6 @@ const _create = <ObjectLiteral, SObject extends object, Extensions>({
     } catch (error) {
       reject(new TROError(error.message, object_name, { props }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -139,8 +137,6 @@ const _update = <ObjectLiteral, SObject extends object, Extensions>({
     } catch (error) {
       reject(new TROError(error.message, object_name, { id, props }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -158,8 +154,6 @@ const _delete = ({ object_name, id }: { object_name: string; id: string }) => {
     } catch (error) {
       reject(new TROError(error.message, object_name, { id }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -233,15 +227,11 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
                   extensions,
                   props: ops,
                   options,
-                }).catch((_: TROError) => {
-                  throw new TROError(_.message, _.object_name, _.attributes)
                 })
               },
               async delete() {
                 const self = this as TRORecord<ObjectLiteral, SObject, Extensions>
-                await _delete({ object_name, id: self['Id'] }).catch((_: TROError) => {
-                  throw new TROError(_.message, _.object_name, _.attributes)
-                })
+                await _delete({ object_name, id: self['Id'] })
               },
               toObject() {
                 const _ = Deepmerge({}, this as TRORecord<ObjectLiteral, SObject, Extensions>) as Partial<
@@ -275,8 +265,6 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
     } catch (error) {
       reject(new TROError(error!.message, object_name, { criteria: criteria }))
     }
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -383,8 +371,6 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
     }
 
     resolve(awaits.flat())
-  }).catch((_: TROError) => {
-    throw new TROError(_.message, _.object_name, _.attributes)
   })
 }
 
@@ -490,8 +476,6 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
         object_name,
         extensions,
         criteria,
-      }).catch((_: TROError) => {
-        throw new TROError(_.message, _.object_name, _.attributes)
       })
 
       return _.length === 0 ? undefined : _[0]
@@ -515,19 +499,13 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
         criteria,
         size: this._size,
         options,
-      }).catch((_: TROError) => {
-        throw new TROError(_.message, _.object_name, _.attributes)
       })
     },
     async insert<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
       props: SObject,
       options?: UpsertOptions<K>,
     ): Promise<any> {
-      return await _create<ObjectLiteral, SObject, Extensions>({ object_name, extensions, props, options }).catch(
-        (_: TROError) => {
-          throw new TROError(_.message, _.object_name, _.attributes)
-        },
-      )
+      return await _create<ObjectLiteral, SObject, Extensions>({ object_name, extensions, props, options })
     },
     async update<K extends keyof FetchResultTypes<ObjectLiteral, SObject, Extensions>>(
       id: string,
@@ -541,14 +519,10 @@ const TypedRemoteObjects = <ObjectLiteral, SObject extends object, Extensions = 
         extensions,
         props,
         options,
-      }).catch((_: TROError) => {
-        throw new TROError(_.message, _.object_name, _.attributes)
       })
     },
     async delete(id) {
-      await _delete({ object_name, id }).catch((_: TROError) => {
-        throw new TROError(_.message, _.object_name, _.attributes)
-      })
+      await _delete({ object_name, id })
     },
   }
 }
