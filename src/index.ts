@@ -152,7 +152,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         },
       )
     } catch (error) {
-      reject(new TROError(error.message, object_name, { options, clone_options }))
+      reject(new TROError((error as Error).message, object_name, { options, clone_options }))
     }
   })
 }
@@ -199,9 +199,9 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
 
           const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
             criteria: {
-              where: ({
+              where: {
                 Id: { eq: ids[0] },
-              } as unknown) as Where<ObjectType>,
+              } as unknown as Where<ObjectType>,
             },
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
@@ -213,7 +213,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
         },
       )
     } catch (error) {
-      reject(new TROError(error.message, object_name, { props, clone_props }))
+      reject(new TROError((error as Error).message, object_name, { props, clone_props }))
     }
   })
 }
@@ -250,7 +250,7 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
           }
 
           const _ = await fetchAll<ObjectName, ObjectType>(object_name, {
-            criteria: { where: ({ Id: { eq: id } } as unknown) as Where<ObjectType> },
+            criteria: { where: { Id: { eq: id } } as unknown as Where<ObjectType> },
           }).catch((_: Error) => _)
           if (_ instanceof Error) {
             reject(_)
@@ -261,7 +261,7 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
         },
       )
     } catch (error) {
-      reject(new TROError(error.message, object_name, { props, clone_props }))
+      reject(new TROError((error as Error).message, object_name, { props, clone_props }))
     }
   })
 }
@@ -278,7 +278,7 @@ export function del(object_name: string, id: string) {
         resolve()
       })
     } catch (error) {
-      reject(new TROError(error.message, object_name, { id }))
+      reject(new TROError((error as Error).message, object_name, { id }))
     }
   })
 }
