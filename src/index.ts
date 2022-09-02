@@ -7,16 +7,16 @@ declare const SObjectModel: { [object_name: string]: new <ObjectType>() => Remot
 
 export { Where }
 
-type TransactionCore<ObjectType> = {
+type PropsCore<ObjectType> = {
   [FieldName in keyof ObjectType]?: ObjectType[FieldName] extends boolean
     ? ObjectType[FieldName]
     : ObjectType[FieldName] | null
 }
 
-export type Transaction<ObjectType> = { [K in keyof TransactionCore<ObjectType>]: TransactionCore<ObjectType>[K] }
+export type Props<ObjectType> = { [K in keyof PropsCore<ObjectType>]: PropsCore<ObjectType>[K] }
 
 type RecordCore<ObjectName, ObjectType> = { type: ObjectName; Id: string } & {
-  [FieldName in keyof Transaction<ObjectType>]: NonNullable<Transaction<ObjectType>[FieldName]>
+  [FieldName in keyof Props<ObjectType>]: NonNullable<Props<ObjectType>[FieldName]>
 }
 
 export type Record<ObjectName, ObjectType> = {
@@ -110,7 +110,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
 
     Object.keys(where).forEach(field_name => {
       if (field_name === 'and' || field_name === 'or') {
-        adjustDate(where[field_name]!)
+        adjustDate(where[field_name])
         return
       }
 
@@ -170,7 +170,7 @@ export async function fetchOne<ObjectName extends string, ObjectType>(
 
 export function ins<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
   object_name: ObjectName,
-  props: Transaction<ObjectType>,
+  props: Props<ObjectType>,
   options?: { fetch: Fetch },
 ) {
   const clone_props = deepmerge<typeof props>({}, props)
@@ -221,7 +221,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
 export function upd<ObjectName extends string, ObjectType, Fetch extends true | false = true>(
   object_name: ObjectName,
   id: string,
-  props: Transaction<ObjectType>,
+  props: Props<ObjectType>,
   options?: { fetch: Fetch },
 ) {
   const clone_props = deepmerge<typeof props>({}, props)
@@ -287,6 +287,6 @@ export function criteria<ObjectType>(_: Criteria<ObjectType>) {
   return _
 }
 
-export function transaction<ObjectType>(_: Transaction<ObjectType>) {
+export function props<ObjectType>(_: Props<ObjectType>) {
   return _
 }
