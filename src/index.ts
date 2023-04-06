@@ -23,9 +23,9 @@ export type Record<ObjectName, ObjectType> = {
   [K in keyof RecordCore<ObjectName, ObjectType>]: RecordCore<ObjectName, ObjectType>[K]
 }
 
-export class TROError extends CustomError {
-  constructor(message: string, public object_name: string, public attributes?: object) {
-    super(message)
+export class TroError extends CustomError {
+  constructor(public message: string, public object_name: string, public attributes: object) {
+    super()
   }
 
   toObject() {
@@ -136,7 +136,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         clone_criteria,
         (error, records) => {
           if (error != null) {
-            reject(new TROError(error.message, object_name, { options, clone_options }))
+            reject(new TroError(error.message, object_name, { options }))
             return
           }
 
@@ -152,7 +152,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
         },
       )
     } catch (error) {
-      reject(new TROError((error as Error).message, object_name, { options, clone_options }))
+      reject(new TroError((error as Error).message, object_name, { options }))
     }
   })
 }
@@ -188,7 +188,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
         async (error, ids) => {
           if (ids.length === 0) {
-            reject(new TROError(error!.message, object_name, { props, clone_props }))
+            reject(new TroError(error!.message, object_name, { props }))
             return
           }
 
@@ -213,7 +213,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
         },
       )
     } catch (error) {
-      reject(new TROError((error as Error).message, object_name, { props, clone_props }))
+      reject(new TroError((error as Error).message, object_name, { props }))
     }
   })
 }
@@ -240,7 +240,7 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
         clone_props as { [field_name: string]: ObjectType[keyof ObjectType] },
         async error => {
           if (error != null) {
-            reject(new TROError(error.message, object_name, { props, clone_props }))
+            reject(new TroError(error.message, object_name, { props }))
             return
           }
 
@@ -261,7 +261,7 @@ export function upd<ObjectName extends string, ObjectType, Fetch extends true | 
         },
       )
     } catch (error) {
-      reject(new TROError((error as Error).message, object_name, { props, clone_props }))
+      reject(new TroError((error as Error).message, object_name, { props }))
     }
   })
 }
@@ -271,14 +271,14 @@ export function del(object_name: string, id: string) {
     try {
       s_object_models[object_name]!.remote_object.del(id, error => {
         if (error != null) {
-          reject(new TROError(error.message, object_name, { id }))
+          reject(new TroError(error.message, object_name, { id }))
           return
         }
 
         resolve()
       })
     } catch (error) {
-      reject(new TROError((error as Error).message, object_name, { id }))
+      reject(new TroError((error as Error).message, object_name, { id }))
     }
   })
 }
