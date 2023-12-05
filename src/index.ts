@@ -186,7 +186,6 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
 
   Object.keys(clone_props).forEach(_ => {
     const p = clone_props[_]
-    console.log(_, p)
     if (p instanceof Date) {
       clone_props[_] = addHours(p, -time_zone_offset)
     }
