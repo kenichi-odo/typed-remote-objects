@@ -123,6 +123,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
       const operator_key = Object.keys(w)[0]
       const value = w[operator_key]
       if (value == null) {
+        delete where[field_name]
         return
       }
 
