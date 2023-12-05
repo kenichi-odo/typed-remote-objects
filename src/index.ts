@@ -108,7 +108,9 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
       return
     }
 
+    console.log('where', where)
     Object.keys(where).forEach(field_name => {
+      console.log('where[field_name]', where[field_name])
       if (field_name === 'and' || field_name === 'or') {
         adjustDate(where[field_name])
         return
@@ -177,6 +179,7 @@ export function ins<ObjectName extends string, ObjectType, Fetch extends true | 
 
   Object.keys(clone_props).forEach(_ => {
     const p = clone_props[_]
+    console.log(_, p)
     if (p instanceof Date) {
       clone_props[_] = addHours(p, -time_zone_offset)
     }
