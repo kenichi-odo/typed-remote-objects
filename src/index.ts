@@ -24,7 +24,11 @@ export type Record<ObjectName, ObjectType> = {
 }
 
 export class TroError extends CustomError {
-  constructor(public message: string, public object_name: string, public attributes: object) {
+  constructor(
+    public message: string,
+    public object_name: string,
+    public attributes: object,
+  ) {
     super()
   }
 
@@ -108,9 +112,7 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
       return
     }
 
-    console.log('where', where)
     Object.keys(where).forEach(field_name => {
-      console.log('where[field_name]', where[field_name])
       if (field_name === 'and' || field_name === 'or') {
         adjustDate(where[field_name])
         return
@@ -120,6 +122,10 @@ export async function fetchAll<ObjectName extends string, ObjectType>(
 
       const operator_key = Object.keys(w)[0]
       const value = w[operator_key]
+      if (value == null) {
+        return
+      }
+
       if (value instanceof Date) {
         w[operator_key] = addHours(value, -time_zone_offset)
         return
