@@ -166,10 +166,10 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
           return
         }
 
-        reject(new TroError(error.message, s_object_name, { options }))
+        reject(new TroError(error.message, s_object_name, { options, criteria: clone_criteria }))
       })
     } catch (error) {
-      reject(new TroError((error as Error).message, s_object_name, { options }))
+      reject(new TroError((error as Error).message, s_object_name, { options, criteria: clone_criteria }))
     }
   })
 }
