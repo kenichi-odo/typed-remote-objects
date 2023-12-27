@@ -1,4 +1,4 @@
-export type WhereCondition<T> = {
+export type Operator<T> = {
   /**
    * =
    */
@@ -45,48 +45,46 @@ export type WhereCondition<T> = {
   nin?: T[]
 }
 
-export type WhereMore<ObjectType> = {
+type LogicalOperator<SObjectType> = {
   /**
    * AND
    */
-  and?: Where<ObjectType>
+  and?: Where<SObjectType>
 
   /**
    * OR
    */
-  or?: Where<ObjectType>
+  or?: Where<SObjectType>
 }
 
-export type WhereObjectType<ObjectType> = {
-  [Field in keyof ObjectType]?: WhereCondition<ObjectType[Field]>
+type Conditions<SObjectType> = {
+  [Field in keyof SObjectType]?: Operator<SObjectType[Field]>
 }
 
-type WhereCore<ObjectType> = WhereMore<ObjectType> & WhereObjectType<ObjectType>
+type ConditionsAndLogicalOperator<SObjectType> = Conditions<SObjectType> & LogicalOperator<SObjectType>
 
-export type Where<ObjectType> = { [K in keyof WhereCore<ObjectType>]: WhereCore<ObjectType>[K] }
+export type Where<SObjectType> = {
+  [Key in keyof ConditionsAndLogicalOperator<SObjectType>]: ConditionsAndLogicalOperator<SObjectType>[Key]
+}
 
-export type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
+type OrderType = 'ASC NULLS FIRST' | 'ASC NULLS LAST' | 'ASC' | 'DESC NULLS FIRST' | 'DESC NULLS LAST' | 'DESC'
 
-export type Order<ObjectType> = { [Field in keyof ObjectType]?: OrderType }[]
+type Order<SObjectType> = {
+  [Field in keyof SObjectType]?: OrderType
+}[]
 
-export type Criteria<ObjectType> = {
-  where?: Where<ObjectType>
-  orderby?: Order<ObjectType>
+export type Criteria<SObjectType> = {
+  where?: Where<SObjectType>
+  orderby?: Order<SObjectType>
   limit?: number
   offset?: number
 }
 
-export type RemoteObjectRecord<ObjectType> = {
-  get<Field extends keyof ObjectType>(field_name: keyof ObjectType): ObjectType[Field]
-  _fields: {
-    [field_name: string]: {
-      type: string
-      shorthand?: string
-    }
-  }
+export type Props<SObjectType> = {
+  [Field in keyof SObjectType]?: SObjectType[Field] extends boolean ? SObjectType[Field] : SObjectType[Field] | null
 }
 
-type RemotingEvent = {
+type RemoteObjectEvent = {
   action: string
   method: string
   ref: boolean
@@ -97,20 +95,40 @@ type RemotingEvent = {
   type: string
 }
 
-export type RemoteObject<ObjectType> = {
+export type RemoteObjectInstance<SObjectType> = {
   retrieve(
-    criteria: Criteria<ObjectType>,
-    result: (error: Error | undefined, records: RemoteObjectRecord<ObjectType>[]) => void,
+    criteria: Criteria<SObjectType>,
+    result: (
+      error: Error | undefined,
+      records: {
+        get<Field extends keyof SObjectType>(field_name: keyof SObjectType): SObjectType[Field]
+        _fields: {
+          [Field in keyof SObjectType]: {
+            type: string
+            shorthand?: string
+          }
+        }
+      }[],
+    ) => void,
   ): void
-  create<Field extends keyof ObjectType>(
-    props: { [field_name: string]: ObjectType[Field] },
-    result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
+
+  create(
+    props: Props<SObjectType>,
+    result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void,
   ): void
-  update<Field extends keyof ObjectType>(
+
+  update(
     ids: string[],
-    props: { [field_name: string]: ObjectType[Field] },
-    result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void,
+    props: Props<SObjectType>,
+    result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void,
   ): void
-  del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemotingEvent) => void): void
-  _fields: { [field_name: string]: { type: string; shorthand: string } }
+
+  del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void): void
+
+  _fields: {
+    [Field in keyof SObjectType]: {
+      type: string
+      shorthand: string
+    }
+  }
 }
