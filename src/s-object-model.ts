@@ -114,13 +114,13 @@ export type RemoteObjectInstance<SObjectType> = {
 
   create(
     props: Props<SObjectType>,
-    result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void,
+    result: (error: Error | null, affected_ids: string[], event: RemoteObjectEvent) => void,
   ): void
 
   update(
     ids: string[],
     props: Props<SObjectType>,
-    result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void,
+    result: (error: Error | null, affected_ids: string[], event: RemoteObjectEvent) => void,
   ): void
 
   del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void): void

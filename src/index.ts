@@ -23,35 +23,79 @@ export class TroError extends CustomError {
 
   toObject() {
     return {
-      attributes: this.attributes,
-      message: this.message,
       name: this.name,
+      message: this.message,
       s_object_name: this.s_object_name,
+      attributes: this.attributes,
     }
   }
 }
+
+const getKeys = <T extends { [key: string]: unknown }>(obj: T): (keyof T)[] => Object.keys(obj)
 
 declare const SObjectModel: {
   [s_object_name: string]: new <SObjectType>() => RemoteObjectInstance<SObjectType>
 }
 
-const models: { name: string; instance: RemoteObjectInstance<unknown> }[] = []
+const models: { [s_object_name: string]: RemoteObjectInstance<unknown> } = {}
 const getRemoteObject = <SObjectType>(s_object_name: string) =>
-  models.find(_ => _.name === s_object_name)!.instance as RemoteObjectInstance<SObjectType>
+  models[s_object_name] as RemoteObjectInstance<SObjectType>
 
 let time_zone_offset: number
-export const init = (args: {
-  time_zone_offset?: number
+export const init = (
   un_accessible_fields: {
-    s_object_name: string
-    fields: string[]
-  }[]
-}) => {
-  time_zone_offset = args.time_zone_offset ?? 9
-  args.un_accessible_fields.forEach(_ => {
-    const instance = new SObjectModel[_.s_object_name]()
-    _.fields.forEach(_ => delete instance._fields[_ as string])
-    models.push({ name: _.s_object_name, instance })
+    [s_object_name: string]: string[]
+  },
+  time_zone_offset?: number,
+) => {
+  time_zone_offset = time_zone_offset ?? 9
+  getKeys(un_accessible_fields).forEach(s_object_name => {
+    const instance = new SObjectModel[s_object_name]()
+    un_accessible_fields[s_object_name].forEach(_ => delete instance._fields[_])
+    models[s_object_name] = instance
+  })
+}
+
+/**
+ * @param where The 'Date' within the object undergoes destructive modification to become UTC time.
+ * @returns When the `IN` clause is an empty array, it returns true.
+ */
+const validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where']) => {
+  if (where == null) {
+    return false
+  }
+
+  return getKeys(where).some(field_name => {
+    if (field_name === 'and' || field_name === 'or') {
+      return validateAndDateToUtc(where[field_name as string])
+    }
+
+    const operator = where[field_name]!
+    const operator_key = getKeys(operator)[0] as keyof Operator<SObjectType>
+
+    const value = operator[operator_key]
+    if (value == null) {
+      delete where[field_name]
+      return false
+    }
+
+    if (value instanceof Date) {
+      operator[operator_key as string] = addHours(value, -time_zone_offset)
+      return false
+    }
+
+    if (!Array.isArray(value)) {
+      return false
+    }
+
+    if (operator_key === 'in' && value.length === 0) {
+      return true
+    }
+
+    operator[operator_key as string] = [...new Set(value as any)].map(v =>
+      v instanceof Date ? addHours(v, -time_zone_offset) : v,
+    )
+    return false
   })
 }
 
@@ -60,89 +104,38 @@ const MAX_SIZE = 2000
 
 export const fetchAll = async <SObjectName extends string, SObjectType>(
   s_object_name: SObjectName,
-  options:
-    | {
-        criteria?: Criteria<SObjectType>
-        size?: number
-      }
-    | undefined = {
-    criteria: {},
-    size: MAX_SIZE,
-  },
+  criteria: Criteria<SObjectType> | undefined = {},
 ) => {
-  const clone_options = deepmerge<typeof options>({}, options)
-  if (clone_options.criteria == null) {
-    clone_options.criteria = {}
-  }
+  const clone_criteria = deepmerge<typeof criteria>({}, criteria)
 
-  const clone_criteria = deepmerge<typeof clone_options.criteria>({}, clone_options.criteria)!
   if (clone_criteria.limit == null && clone_criteria.offset == null) {
-    let size = clone_options.size ?? MAX_SIZE
+    let remaining_size = MAX_SIZE
     let offset = 0
 
-    const results: Record<SObjectName, SObjectType>[] = []
-    while (size > 0) {
-      if (size > BATCH_SIZE) {
-        clone_criteria.limit = BATCH_SIZE
-        size -= BATCH_SIZE
-      } else {
-        clone_criteria.limit = size
-        size = 0
-      }
-
-      if (offset !== 0) {
-        clone_criteria.offset = offset
-      }
-
-      const records = await fetchAll(s_object_name, { criteria: clone_criteria })
+    const result: Record<SObjectName, SObjectType>[] = []
+    while (remaining_size > 0) {
+      const limit = remaining_size > BATCH_SIZE ? BATCH_SIZE : remaining_size
+      const records = await fetchAll<SObjectName, SObjectType>(s_object_name, {
+        where: clone_criteria.where,
+        limit,
+        offset: offset === 0 ? undefined : offset,
+      })
       if (records.length === 0) {
         break
       }
 
-      results.push(...records)
+      result.push(...records)
+      remaining_size -= limit
       offset += BATCH_SIZE
     }
 
-    return results
+    return result
   }
 
-  let is_no_result = false
-  const adjustDate = (where: (typeof clone_criteria)['where']) => {
-    if (where == null) {
-      return
-    }
-
-    Object.keys(where).forEach(field_name => {
-      if (field_name === 'and' || field_name === 'or') {
-        adjustDate(where[field_name])
-        return
-      }
-
-      const operator = where[field_name as keyof SObjectType]!
-      const operator_key = Object.keys(operator)[0]
-
-      const value = operator[operator_key]
-      if (value == null) {
-        delete where[field_name]
-        return
-      }
-
-      if (value instanceof Date) {
-        operator[operator_key] = addHours(value, -time_zone_offset)
-        return
-      }
-
-      if (Array.isArray(value)) {
-        if (operator_key === 'in' && value.length === 0) {
-          is_no_result = true
-          return
-        }
-
-        operator[operator_key] = [...new Set(value)].map(v => (v instanceof Date ? addHours(v, -time_zone_offset) : v))
-      }
-    })
+  const is_no_result = validateAndDateToUtc(clone_criteria.where)
+  if (clone_criteria.where != null && getKeys(clone_criteria.where).length === 0) {
+    delete clone_criteria.where
   }
-  adjustDate(clone_criteria.where)
 
   return new Promise<Record<SObjectName, SObjectType>[]>((resolve, reject) => {
     if (is_no_result) {
@@ -154,11 +147,10 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
       getRemoteObject<SObjectType>(s_object_name).retrieve(clone_criteria, (error, records) => {
         if (error == null) {
           resolve(
-            records.map(record => {
+            records.map(r => {
               const result = { type: s_object_name } as Record<SObjectName, SObjectType>
-              Object.keys(record._fields).forEach(field_name => {
-                const fn = field_name as keyof SObjectType
-                result[record._fields[fn].shorthand || fn] = record.get(fn)
+              getKeys(r._fields).forEach(field_name => {
+                result[r._fields[field_name].shorthand || field_name] = r.get(field_name)
               })
               return result
             }),
@@ -166,68 +158,78 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
           return
         }
 
-        reject(new TroError(error.message, s_object_name, { options, criteria: clone_criteria }))
+        reject(new TroError(error.message, s_object_name, { criteria, clone_criteria }))
       })
     } catch (error) {
-      reject(new TroError((error as Error).message, s_object_name, { options, criteria: clone_criteria }))
+      reject(new TroError((error as Error).message, s_object_name, { criteria, clone_criteria }))
     }
   })
 }
 
 export const fetchOne = async <SObjectName extends string, SObjectType>(
   s_object_name: SObjectName,
-  criteria: Criteria<SObjectType> | undefined = {},
+  criteria: Omit<Criteria<SObjectType>, 'limit'> | undefined = {},
 ): Promise<Record<SObjectName, SObjectType> | undefined> => {
-  const result = await fetchAll<SObjectName, SObjectType>(s_object_name, {
-    criteria: deepmerge<typeof criteria>({}, criteria),
-    size: 1,
-  })
+  const result = await fetchAll<SObjectName, SObjectType>(s_object_name, deepmerge(criteria, { limit: 1 }))
   return result[0]
 }
+
+const propsDateToUtc = <SObjectType>(props: Props<SObjectType>) => {
+  const clone_props = deepmerge<typeof props>({}, props)
+  getKeys(clone_props).forEach(_ => {
+    const p = clone_props[_]
+    if (p instanceof Date) {
+      clone_props[_ as string] = addHours(p, -time_zone_offset)
+    }
+  })
+  return clone_props
+}
+
+const callback =
+  <SObjectName extends string, SObjectType, Fetch extends true | false = true>(
+    s_object_name: SObjectName,
+    props: Props<SObjectType>,
+    resolve: (_?) => void,
+    reject,
+    fetch?: Fetch,
+  ) =>
+  async (error: Error | null, ids: string[]) => {
+    console.log('error', error)
+    console.log('ids', ids)
+
+    if (error != null) {
+      reject(new TroError(error!.message, s_object_name, { props }))
+      return
+    }
+
+    if (fetch != null && !fetch) {
+      resolve()
+      return
+    }
+
+    const result = await fetchOne<SObjectName, SObjectType>(s_object_name, {
+      where: {
+        Id: { eq: ids[0] },
+      } as unknown as Where<SObjectType>,
+    }).catch((_: Error) => _)
+    if (result instanceof Error) {
+      reject(result)
+      return
+    }
+
+    resolve(result)
+  }
 
 export const ins = <SObjectName extends string, SObjectType, Fetch extends true | false = true>(
   s_object_name: SObjectName,
   props: Props<SObjectType>,
-  options?: { fetch: Fetch },
+  fetch?: Fetch,
 ) => {
-  const clone_props = deepmerge<typeof props>({}, props)
-
-  Object.keys(clone_props).forEach(_ => {
-    const p = clone_props[_]
-    if (p instanceof Date) {
-      clone_props[_] = addHours(p, -time_zone_offset)
-    }
-  })
-
-  return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve: Function, reject) => {
+  return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve, reject) => {
     try {
-      getRemoteObject<SObjectType>(s_object_name).create(
-        clone_props as { [Field in keyof SObjectType]: SObjectType[Field] },
-        async (error, ids) => {
-          if (ids.length === 0) {
-            reject(new TroError(error!.message, s_object_name, { props }))
-            return
-          }
-
-          if (options != null && !options.fetch) {
-            resolve()
-            return
-          }
-
-          const _ = await fetchAll<SObjectName, SObjectType>(s_object_name, {
-            criteria: {
-              where: {
-                Id: { eq: ids[0] },
-              } as unknown as Where<SObjectType>,
-            },
-          }).catch((_: Error) => _)
-          if (_ instanceof Error) {
-            reject(_)
-            return
-          }
-
-          resolve(_[0] as Fetch extends true ? Record<SObjectName, SObjectType> : void)
-        },
+      getRemoteObject(s_object_name).create(
+        propsDateToUtc(props),
+        callback(s_object_name, props, resolve, reject, fetch),
       )
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { props }))
@@ -239,47 +241,14 @@ export const upd = <SObjectName extends string, SObjectType, Fetch extends true 
   s_object_name: SObjectName,
   id: string,
   props: Props<SObjectType>,
-  options?: { fetch: Fetch },
+  fetch?: Fetch,
 ) => {
-  const clone_props = deepmerge<typeof props>({}, props)
-
-  Object.keys(clone_props).forEach(_ => {
-    const p = clone_props[_]
-    if (p instanceof Date) {
-      clone_props[_] = addHours(p, -time_zone_offset)
-    }
-  })
-
-  return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve: Function, reject) => {
+  return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve: (_?) => void, reject) => {
     try {
-      getRemoteObject<SObjectType>(s_object_name).update(
+      getRemoteObject(s_object_name).update(
         [id],
-        clone_props as { [Field in keyof SObjectType]: SObjectType[Field] },
-        async error => {
-          if (error != null) {
-            reject(new TroError(error.message, s_object_name, { props }))
-            return
-          }
-
-          if (options != null && !options.fetch) {
-            resolve()
-            return
-          }
-
-          const _ = await fetchAll<SObjectName, SObjectType>(s_object_name, {
-            criteria: {
-              where: {
-                Id: { eq: id },
-              } as unknown as Where<SObjectType>,
-            },
-          }).catch((_: Error) => _)
-          if (_ instanceof Error) {
-            reject(_)
-            return
-          }
-
-          resolve(_[0] as Fetch extends true ? Record<SObjectName, SObjectType> : void)
-        },
+        propsDateToUtc(props),
+        callback(s_object_name, props, resolve, reject, fetch),
       )
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { props }))
@@ -303,6 +272,6 @@ export const del = (s_object_name: string, id: string) =>
     }
   })
 
-export const criteria = <SObjectType>(_: Criteria<SObjectType>) => _
+export const criteria = <SObjectType>(_: Criteria<SObjectType> = {}) => _
 
 export const props = <SObjectType>(_: Props<SObjectType>) => _
