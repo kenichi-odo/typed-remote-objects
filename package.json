@@ -7,7 +7,7 @@
   },
   "description": "A Visualforce remote objects that is type safe and immutable.",
   "devDependencies": {
-    "@types/node": "20.10.5",
+    "@types/node": "20.10.6",
     "prettier": "3.1.1",
     "typescript": "5.3.3"
   },
@@ -43,5 +43,5 @@
   },
   "sideEffects": false,
   "types": "./module/types/index.d.ts",
-  "version": "5.0.0"
+  "version": "5.1.0"
 }

@@ -185,32 +185,29 @@ const propsDateToUtc = <SObjectType>(props: Props<SObjectType>) => {
   return clone_props
 }
 
-const callback =
-  <SObjectName extends string, SObjectType, Fetch extends true | false = true>(
+const manipulateCallback =
+  <SObjectName extends string, SObjectType>(
     s_object_name: SObjectName,
     props: Props<SObjectType>,
+    is_fetch: boolean,
     resolve: (_?) => void,
     reject,
-    fetch?: Fetch,
   ) =>
   async (error: Error | null, ids: string[]) => {
-    console.log('error', error)
-    console.log('ids', ids)
-
     if (error != null) {
       reject(new TroError(error!.message, s_object_name, { props }))
       return
     }
 
-    if (fetch != null && !fetch) {
+    if (!is_fetch) {
       resolve()
       return
     }
 
-    const result = await fetchOne<SObjectName, SObjectType>(s_object_name, {
+    const result = await fetchOne<SObjectName, { Id: string }>(s_object_name, {
       where: {
         Id: { eq: ids[0] },
-      } as unknown as Where<SObjectType>,
+      },
     }).catch((_: Error) => _)
     if (result instanceof Error) {
       reject(result)
@@ -220,16 +217,16 @@ const callback =
     resolve(result)
   }
 
-export const ins = <SObjectName extends string, SObjectType, Fetch extends true | false = true>(
+export const ins = <SObjectName extends string, SObjectType, Fetch extends true | false = false>(
   s_object_name: SObjectName,
   props: Props<SObjectType>,
-  fetch?: Fetch,
+  is_fetch: Fetch = false as Fetch,
 ) => {
   return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve, reject) => {
     try {
       getRemoteObject(s_object_name).create(
         propsDateToUtc(props),
-        callback(s_object_name, props, resolve, reject, fetch),
+        manipulateCallback(s_object_name, props, is_fetch, resolve, reject),
       )
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { props }))
@@ -237,18 +234,18 @@ export const ins = <SObjectName extends string, SObjectType, Fetch extends true 
   })
 }
 
-export const upd = <SObjectName extends string, SObjectType, Fetch extends true | false = true>(
+export const upd = <SObjectName extends string, SObjectType, Fetch extends true | false = false>(
   s_object_name: SObjectName,
   id: string,
   props: Props<SObjectType>,
-  fetch?: Fetch,
+  is_fetch: Fetch = false as Fetch,
 ) => {
   return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve: (_?) => void, reject) => {
     try {
       getRemoteObject(s_object_name).update(
         [id],
         propsDateToUtc(props),
-        callback(s_object_name, props, resolve, reject, fetch),
+        manipulateCallback(s_object_name, props, is_fetch, resolve, reject),
       )
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { props }))

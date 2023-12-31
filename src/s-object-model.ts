@@ -125,6 +125,9 @@ export type RemoteObjectInstance<SObjectType> = {
 
   del(id: string, result: (error: Error | undefined, affected_ids: string[], event: RemoteObjectEvent) => void): void
 
+  /**
+   * Accessible fields.
+   */
   _fields: {
     [Field in keyof SObjectType]: {
       type: string
