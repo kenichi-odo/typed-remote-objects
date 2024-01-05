@@ -119,6 +119,7 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
         where: clone_criteria.where,
         limit,
         offset: offset === 0 ? undefined : offset,
+        orderby: clone_criteria.orderby,
       })
       if (records.length === 0) {
         break
