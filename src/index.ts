@@ -31,28 +31,28 @@ export class TroError extends CustomError {
   }
 }
 
-const getKeys = <T extends { [key: string]: unknown }>(obj: T): (keyof T)[] => Object.keys(obj)
+const _getKeys = <T extends { [key: string]: unknown }>(obj: T): (keyof T)[] => Object.keys(obj)
 
 declare const SObjectModel: {
   [s_object_name: string]: new <SObjectType>() => RemoteObjectInstance<SObjectType>
 }
 
-const models: { [s_object_name: string]: RemoteObjectInstance<unknown> } = {}
-const getRemoteObject = <SObjectType>(s_object_name: string) =>
-  models[s_object_name] as RemoteObjectInstance<SObjectType>
+const _models: { [s_object_name: string]: RemoteObjectInstance<unknown> } = {}
+const _getRemoteObject = <SObjectType>(s_object_name: string) =>
+  _models[s_object_name] as RemoteObjectInstance<SObjectType>
 
-let time_zone_offset: number
+let _time_zone_offset: number
 export const init = (
   un_accessible_fields: {
     [s_object_name: string]: string[]
   },
   time_zone_offset?: number,
 ) => {
-  time_zone_offset = time_zone_offset ?? 9
-  getKeys(un_accessible_fields).forEach(s_object_name => {
+  _time_zone_offset = time_zone_offset ?? 9
+  _getKeys(un_accessible_fields).forEach(s_object_name => {
     const instance = new SObjectModel[s_object_name]()
     un_accessible_fields[s_object_name].forEach(_ => delete instance._fields[_])
-    models[s_object_name] = instance
+    _models[s_object_name] = instance
   })
 }
 
@@ -60,18 +60,18 @@ export const init = (
  * @param where The 'Date' within the object undergoes destructive modification to become UTC time.
  * @returns When the `IN` clause is an empty array, it returns true.
  */
-const validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where']) => {
+const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where']) => {
   if (where == null) {
     return false
   }
 
-  return getKeys(where).some(field_name => {
+  return _getKeys(where).some(field_name => {
     if (field_name === 'and' || field_name === 'or') {
-      return validateAndDateToUtc(where[field_name as string])
+      return _validateAndDateToUtc(where[field_name as string])
     }
 
     const operator = where[field_name]!
-    const operator_key = getKeys(operator)[0] as keyof Operator<SObjectType>
+    const operator_key = _getKeys(operator)[0] as keyof Operator<SObjectType>
 
     const value = operator[operator_key]
     if (value == null) {
@@ -80,7 +80,7 @@ const validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where']
     }
 
     if (value instanceof Date) {
-      operator[operator_key as string] = addHours(value, -time_zone_offset)
+      operator[operator_key as string] = addHours(value, -_time_zone_offset)
       return false
     }
 
@@ -93,7 +93,7 @@ const validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where']
     }
 
     operator[operator_key as string] = [...new Set(value as any)].map(v =>
-      v instanceof Date ? addHours(v, -time_zone_offset) : v,
+      v instanceof Date ? addHours(v, -_time_zone_offset) : v,
     )
     return false
   })
@@ -133,8 +133,8 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
     return result
   }
 
-  const is_no_result = validateAndDateToUtc(clone_criteria.where)
-  if (clone_criteria.where != null && getKeys(clone_criteria.where).length === 0) {
+  const is_no_result = _validateAndDateToUtc(clone_criteria.where)
+  if (clone_criteria.where != null && _getKeys(clone_criteria.where).length === 0) {
     delete clone_criteria.where
   }
 
@@ -145,12 +145,12 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
     }
 
     try {
-      getRemoteObject<SObjectType>(s_object_name).retrieve(clone_criteria, (error, records) => {
+      _getRemoteObject<SObjectType>(s_object_name).retrieve(clone_criteria, (error, records) => {
         if (error == null) {
           resolve(
             records.map(r => {
               const result = { type: s_object_name } as Record<SObjectName, SObjectType>
-              getKeys(r._fields).forEach(field_name => {
+              _getKeys(r._fields).forEach(field_name => {
                 result[r._fields[field_name].shorthand || field_name] = r.get(field_name)
               })
               return result
@@ -175,18 +175,18 @@ export const fetchOne = async <SObjectName extends string, SObjectType>(
   return result[0]
 }
 
-const propsDateToUtc = <SObjectType>(props: Props<SObjectType>) => {
+const _propsDateToUtc = <SObjectType>(props: Props<SObjectType>) => {
   const clone_props = deepmerge<typeof props>({}, props)
-  getKeys(clone_props).forEach(_ => {
+  _getKeys(clone_props).forEach(_ => {
     const p = clone_props[_]
     if (p instanceof Date) {
-      clone_props[_ as string] = addHours(p, -time_zone_offset)
+      clone_props[_ as string] = addHours(p, -_time_zone_offset)
     }
   })
   return clone_props
 }
 
-const manipulateCallback =
+const _manipulateCallback =
   <SObjectName extends string, SObjectType>(
     s_object_name: SObjectName,
     props: Props<SObjectType>,
@@ -225,9 +225,9 @@ export const ins = <SObjectName extends string, SObjectType, Fetch extends true 
 ) => {
   return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve, reject) => {
     try {
-      getRemoteObject(s_object_name).create(
-        propsDateToUtc(props),
-        manipulateCallback(s_object_name, props, is_fetch, resolve, reject),
+      _getRemoteObject(s_object_name).create(
+        _propsDateToUtc(props),
+        _manipulateCallback(s_object_name, props, is_fetch, resolve, reject),
       )
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { props }))
@@ -243,10 +243,10 @@ export const upd = <SObjectName extends string, SObjectType, Fetch extends true 
 ) => {
   return new Promise<Fetch extends true ? Record<SObjectName, SObjectType> : void>((resolve: (_?) => void, reject) => {
     try {
-      getRemoteObject(s_object_name).update(
+      _getRemoteObject(s_object_name).update(
         [id],
-        propsDateToUtc(props),
-        manipulateCallback(s_object_name, props, is_fetch, resolve, reject),
+        _propsDateToUtc(props),
+        _manipulateCallback(s_object_name, props, is_fetch, resolve, reject),
       )
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { props }))
@@ -257,7 +257,7 @@ export const upd = <SObjectName extends string, SObjectType, Fetch extends true 
 export const del = (s_object_name: string, id: string) =>
   new Promise<void>((resolve, reject) => {
     try {
-      getRemoteObject(s_object_name).del(id, error => {
+      _getRemoteObject(s_object_name).del(id, error => {
         if (error == null) {
           resolve()
           return

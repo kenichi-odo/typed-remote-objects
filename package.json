@@ -1,13 +1,13 @@
 {
   "author": "Kenichi Odo <kenichi.odo@icloud.com>",
   "dependencies": {
-    "date-fns": "3.0.6",
+    "date-fns": "3.2.0",
     "deepmerge": "4.3.1",
     "ts-custom-error": "3.3.1"
   },
   "description": "A Visualforce remote objects that is type safe and immutable.",
   "devDependencies": {
-    "@types/node": "20.10.6",
+    "@types/node": "20.10.8",
     "prettier": "3.1.1",
     "typescript": "5.3.3"
   },
@@ -43,5 +43,5 @@
   },
   "sideEffects": false,
   "types": "./module/types/index.d.ts",
-  "version": "5.2.0"
+  "version": "5.3.0"
 }
