@@ -29,7 +29,8 @@ export type UpsertOptions<T> = {
 }
 
 export type FetchAllOptions = {
-  parallel: boolean
+  parallel?: boolean
+  clone_params?: boolean
 }
 
 export type TROInstance<ObjectLiteral, SObject, Extensions> = {

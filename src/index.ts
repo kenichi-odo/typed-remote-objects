@@ -167,15 +167,19 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
   object_name,
   extensions,
   criteria,
+  is_clone = false,
 }: {
   object_name: string
   extensions: Extensions
   criteria: Criteria<SObject>
+  is_clone?: boolean
 }) => {
+  const _criteria = is_clone ? Deepmerge({}, criteria) : criteria
+
   return new Promise<TRORecord<ObjectLiteral, SObject, Extensions>[]>((resolve, reject) => {
-    if (criteria.where != null) {
-      Object.keys(criteria.where).forEach(_ => {
-        const w = criteria.where![_]
+    if (_criteria.where != null) {
+      Object.keys(_criteria.where).forEach(_ => {
+        const w = _criteria.where![_]
         if (_ === 'and' || _ === 'or') {
           Object.keys(w).forEach(ao_key_ => {
             const aow = w[ao_key_]
@@ -199,9 +203,9 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
     }
 
     try {
-      s_object_models[object_name]!.retrieve<SObject>(criteria, (error, records) => {
+      s_object_models[object_name]!.retrieve<SObject>(_criteria, (error, records) => {
         if (error != null) {
-          reject(new TROError(error!.message, object_name, { criteria: criteria }))
+          reject(new TROError(error!.message, object_name, { criteria: _criteria }))
           return
         }
 
@@ -273,7 +277,7 @@ const _retrieve = <ObjectLiteral, SObject extends object, Extensions>({
         )
       })
     } catch (error) {
-      reject(new TROError(error!.message, object_name, { criteria: criteria }))
+      reject(new TROError(error!.message, object_name, { criteria: _criteria }))
     }
   }).catch((_: TROError) => {
     throw new TROError(_.message, _.object_name, _.attributes)
@@ -299,6 +303,7 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
         object_name,
         extensions,
         criteria,
+        is_clone: options?.clone_params,
       }).catch((_: Error) => _)
       if (_ instanceof Error) {
         reject(_)
@@ -333,6 +338,7 @@ const _retrieves = <ObjectLiteral, SObject extends object, Extensions>({
           object_name,
           extensions,
           criteria,
+          is_clone: options?.clone_params,
         }).catch((_: Error) => _)
         if (records instanceof Error) {
           reject(records)
