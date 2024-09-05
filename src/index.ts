@@ -56,7 +56,7 @@ export const init = (
   })
 }
 
-const escapeSingleQuotes = _ => (typeof _ === 'string' ? _.replace(/'/g, "\\'") : _)
+const escapeSingleQuotes = _ => (typeof _ === 'string' ? _.replace(/'/g, String.raw`\'`) : _)
 
 /**
  * @param where The 'Date' within the object undergoes destructive modification to become UTC time.
