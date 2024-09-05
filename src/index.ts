@@ -56,6 +56,8 @@ export const init = (
   })
 }
 
+const escapeSingleQuotes = _ => (typeof _ === 'string' ? _.replace(/'/g, "\\'") : _)
+
 /**
  * @param where The 'Date' within the object undergoes destructive modification to become UTC time.
  * @returns When the `IN` clause is an empty array, it returns true.
@@ -73,11 +75,13 @@ const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where'
     const operator = where[field_name]!
     const operator_key = _getKeys(operator)[0] as keyof Operator<SObjectType>
 
-    const value = operator[operator_key]
+    let value = operator[operator_key]
     if (value == null) {
       delete where[field_name]
       return false
     }
+
+    value = escapeSingleQuotes(value)
 
     if (value instanceof Date) {
       operator[operator_key as string] = addHours(value, -_time_zone_offset)
@@ -85,6 +89,7 @@ const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where'
     }
 
     if (!Array.isArray(value)) {
+      operator[operator_key as string] = value
       return false
     }
 
@@ -93,7 +98,7 @@ const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where'
     }
 
     operator[operator_key as string] = [...new Set(value as any)].map(v =>
-      v instanceof Date ? addHours(v, -_time_zone_offset) : v,
+      v instanceof Date ? addHours(v, -_time_zone_offset) : escapeSingleQuotes(v),
     )
     return false
   })

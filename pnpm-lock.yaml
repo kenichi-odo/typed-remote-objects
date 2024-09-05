@@ -1,65 +1,76 @@
-lockfileVersion: '6.0'
+lockfileVersion: '9.0'
 
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-dependencies:
-  date-fns:
-    specifier: 3.2.0
-    version: 3.2.0
-  deepmerge:
-    specifier: 4.3.1
-    version: 4.3.1
-  ts-custom-error:
-    specifier: 3.3.1
-    version: 3.3.1
+importers:
 
-devDependencies:
-  '@types/node':
-    specifier: 20.10.8
-    version: 20.10.8
-  prettier:
-    specifier: 3.1.1
-    version: 3.1.1
-  typescript:
-    specifier: 5.3.3
-    version: 5.3.3
+  .:
+    dependencies:
+      date-fns:
+        specifier: 3.6.0
+        version: 3.6.0
+      deepmerge:
+        specifier: 4.3.1
+        version: 4.3.1
+      ts-custom-error:
+        specifier: 3.3.1
+        version: 3.3.1
+    devDependencies:
+      '@types/node':
+        specifier: 22.5.4
+        version: 22.5.4
+      prettier:
+        specifier: 3.3.3
+        version: 3.3.3
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
 
 packages:
 
-  /@types/node@20.10.8:
-    resolution: {integrity: sha512-f8nQs3cLxbAFc00vEU59yf9UyGUftkPaLGfvbVOIDdx2i1b8epBqj2aNGyP19fiyXWvlmZ7qC1XLjAzw/OKIeA==}
-    dependencies:
-      undici-types: 5.26.5
-    dev: true
+  '@types/node@22.5.4':
+    resolution: {integrity: sha512-FDuKUJQm/ju9fT/SeX/6+gBzoPzlVCzfzmGkwKvRHQVxi4BntVbyIwf6a4Xn62mrvndLiml6z/UBXIdEVjQLXg==}
 
-  /date-fns@3.2.0:
-    resolution: {integrity: sha512-E4KWKavANzeuusPi0jUjpuI22SURAznGkx7eZV+4i6x2A+IZxAMcajgkvuDAU1bg40+xuhW1zRdVIIM/4khuIg==}
-    dev: false
+  date-fns@3.6.0:
+    resolution: {integrity: sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww==}
 
-  /deepmerge@4.3.1:
+  deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
-    dev: false
 
-  /prettier@3.1.1:
-    resolution: {integrity: sha512-22UbSzg8luF4UuZtzgiUOfcGM8s4tjBv6dJRT7j275NXsy2jb4aJa4NNveul5x4eqlF1wuhuR2RElK71RvmVaw==}
+  prettier@3.3.3:
+    resolution: {integrity: sha512-i2tDNA0O5IrMO757lfrdQZCc2jPNDVntV0m/+4whiDfWaTKfMNgR7Qz0NAeGz/nRqF4m5/6CLzbP4/liHt12Ew==}
     engines: {node: '>=14'}
     hasBin: true
-    dev: true
 
-  /ts-custom-error@3.3.1:
+  ts-custom-error@3.3.1:
     resolution: {integrity: sha512-5OX1tzOjxWEgsr/YEUWSuPrQ00deKLh6D7OTWcvNHm12/7QPyRh8SYpyWvA4IZv8H/+GQWQEh/kwo95Q9OVW1A==}
     engines: {node: '>=14.0.0'}
-    dev: false
 
-  /typescript@5.3.3:
-    resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
+  typescript@5.5.4:
+    resolution: {integrity: sha512-Mtq29sKDAEYP7aljRgtPOpTvOfbwRWlS6dPRzwjdE+C0R4brX/GUyhHSecbHMFLNBLcJIPt9nl9yG5TZ1weH+Q==}
     engines: {node: '>=14.17'}
     hasBin: true
-    dev: true
 
-  /undici-types@5.26.5:
-    resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
-    dev: true
+  undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
+
+snapshots:
+
+  '@types/node@22.5.4':
+    dependencies:
+      undici-types: 6.19.8
+
+  date-fns@3.6.0: {}
+
+  deepmerge@4.3.1: {}
+
+  prettier@3.3.3: {}
+
+  ts-custom-error@3.3.1: {}
+
+  typescript@5.5.4: {}
+
+  undici-types@6.19.8: {}
