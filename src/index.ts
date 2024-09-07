@@ -42,13 +42,16 @@ const _getRemoteObject = <SObjectType>(s_object_name: string) =>
   _models[s_object_name] as RemoteObjectInstance<SObjectType>
 
 let _time_zone_offset: number
+let _remoting_path: string
 export const init = (
+  remoting_path: string,
   un_accessible_fields: {
     [s_object_name: string]: string[]
   },
   time_zone_offset?: number,
 ) => {
   _time_zone_offset = time_zone_offset ?? 9
+  _remoting_path = remoting_path
   _getKeys(un_accessible_fields).forEach(s_object_name => {
     const instance = new SObjectModel[s_object_name]()
     un_accessible_fields[s_object_name].forEach(_ => delete instance._fields[_])
@@ -104,44 +107,13 @@ const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where'
   })
 }
 
-const BATCH_SIZE = 100
-const MAX_SIZE = 2000
-
 export const fetchAll = async <SObjectName extends string, SObjectType>(
   s_object_name: SObjectName,
   criteria: Criteria<SObjectType> | undefined = {},
 ) => {
   const clone_criteria = deepmerge<typeof criteria>({}, criteria)
 
-  if (clone_criteria.limit == null && clone_criteria.offset == null) {
-    let remaining_size = MAX_SIZE
-    let offset = 0
-
-    const result: Record<SObjectName, SObjectType>[] = []
-    while (remaining_size > 0) {
-      const limit = remaining_size > BATCH_SIZE ? BATCH_SIZE : remaining_size
-      const records = await fetchAll<SObjectName, SObjectType>(s_object_name, {
-        where: clone_criteria.where,
-        limit,
-        offset: offset === 0 ? undefined : offset,
-        orderby: clone_criteria.orderby,
-      })
-      if (records.length === 0) {
-        break
-      }
-
-      result.push(...records)
-      remaining_size -= limit
-      offset += BATCH_SIZE
-    }
-
-    return result
-  }
-
   const is_no_result = _validateAndDateToUtc(clone_criteria.where)
-  if (clone_criteria.where != null && _getKeys(clone_criteria.where).length === 0) {
-    delete clone_criteria.where
-  }
 
   return new Promise<Record<SObjectName, SObjectType>[]>((resolve, reject) => {
     if (is_no_result) {
@@ -150,22 +122,65 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
     }
 
     try {
-      _getRemoteObject<SObjectType>(s_object_name).retrieve(clone_criteria, (error, records) => {
-        if (error == null) {
+      window.Visualforce.remoting.Manager.invokeAction(
+        _remoting_path,
+        s_object_name,
+        Object.keys(_getRemoteObject<SObjectType>(s_object_name)._fields),
+        JSON.stringify(clone_criteria),
+        (result: string, event) => {
+          if (!event.status) {
+            // const isJson = (value: string) => {
+            //   try {
+            //     JSON.parse(value)
+            //   } catch {
+            //     return false
+            //   }
+            //   return true
+            // }
+
+            // reject(
+            //   new RemotingError(
+            //     (isJson(event.message) ? JSON.parse(event.message)?.message : event.message) || '',
+            //     event,
+            //   ),
+            // )
+            reject('Error')
+            return
+          }
           resolve(
-            records.map(r => {
-              const result = { type: s_object_name } as Record<SObjectName, SObjectType>
-              _getKeys(r._fields).forEach(field_name => {
-                result[r._fields[field_name].shorthand || field_name] = r.get(field_name)
-              })
-              return result
+            JSON.parse(result, (key, value) => {
+              if (
+                typeof value === 'string' &&
+                /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{4}|Z)?$/.test(value)
+              ) {
+                const date = new Date(value)
+                if (!isNaN(date.getTime())) {
+                  return date
+                }
+              }
+              return value
             }),
           )
-          return
-        }
+        },
+        { escape: false, buffer: false, timeout: 120000 },
+      )
 
-        reject(new TroError(error.message, s_object_name, { criteria, clone_criteria }))
-      })
+      // _getRemoteObject<SObjectType>(s_object_name).retrieve(clone_criteria, (error, records) => {
+      //   if (error == null) {
+      //     resolve(
+      //       records.map(r => {
+      //         const result = { type: s_object_name } as Record<SObjectName, SObjectType>
+      //         _getKeys(r._fields).forEach(field_name => {
+      //           result[r._fields[field_name].shorthand || field_name] = r.get(field_name)
+      //         })
+      //         return result
+      //       }),
+      //     )
+      //     return
+      //   }
+
+      //   reject(new TroError(error.message, s_object_name, { criteria, clone_criteria }))
+      // })
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { criteria, clone_criteria }))
     }

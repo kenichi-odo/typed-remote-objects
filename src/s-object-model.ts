@@ -1,3 +1,14 @@
+declare global {
+  // eslint-disable-next-line no-var
+  var Visualforce: {
+    remoting: {
+      Manager: {
+        invokeAction(key: string, ..._)
+      }
+    }
+  }
+}
+
 export type Operator<T> = {
   /**
    * =
