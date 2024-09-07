@@ -59,8 +59,6 @@ export const init = (
   })
 }
 
-const escapeSingleQuotes = _ => (typeof _ === 'string' ? _.replace(/'/g, String.raw`\'`) : _)
-
 /**
  * @param where The 'Date' within the object undergoes destructive modification to become UTC time.
  * @returns When the `IN` clause is an empty array, it returns true.
@@ -84,8 +82,6 @@ const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where'
       return false
     }
 
-    value = escapeSingleQuotes(value)
-
     if (value instanceof Date) {
       operator[operator_key as string] = addHours(value, -_time_zone_offset)
       return false
@@ -101,7 +97,7 @@ const _validateAndDateToUtc = <SObjectType>(where: Criteria<SObjectType>['where'
     }
 
     operator[operator_key as string] = [...new Set(value as any)].map(v =>
-      v instanceof Date ? addHours(v, -_time_zone_offset) : escapeSingleQuotes(v),
+      v instanceof Date ? addHours(v, -_time_zone_offset) : v,
     )
     return false
   })
@@ -121,66 +117,50 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
       return
     }
 
+    const field_infos = _getRemoteObject<SObjectType>(s_object_name)._fields
+    const field_names = Object.keys(field_infos)
     try {
       window.Visualforce.remoting.Manager.invokeAction(
         _remoting_path,
         s_object_name,
-        Object.keys(_getRemoteObject<SObjectType>(s_object_name)._fields),
+        field_names,
         JSON.stringify(clone_criteria),
         (result: string, event) => {
-          if (!event.status) {
-            // const isJson = (value: string) => {
-            //   try {
-            //     JSON.parse(value)
-            //   } catch {
-            //     return false
-            //   }
-            //   return true
-            // }
-
-            // reject(
-            //   new RemotingError(
-            //     (isJson(event.message) ? JSON.parse(event.message)?.message : event.message) || '',
-            //     event,
-            //   ),
-            // )
-            reject('Error')
+          if (event.status) {
+            const date_or_datetime_field_names = field_names.filter(_ => ['D', 'F'].includes(field_infos[_].type))
+            resolve(
+              JSON.parse(result, (key, value) => {
+                if (date_or_datetime_field_names.includes(key)) {
+                  const date = new Date(value)
+                  if (!isNaN(date.getTime())) {
+                    return date
+                  }
+                }
+                return value
+              }),
+            )
             return
           }
-          resolve(
-            JSON.parse(result, (key, value) => {
-              if (
-                typeof value === 'string' &&
-                /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{4}|Z)?$/.test(value)
-              ) {
-                const date = new Date(value)
-                if (!isNaN(date.getTime())) {
-                  return date
-                }
-              }
-              return value
-            }),
+
+          const isJson = (value: string) => {
+            try {
+              JSON.parse(value)
+            } catch {
+              return false
+            }
+            return true
+          }
+
+          reject(
+            new TroError(
+              (isJson(event.message) ? JSON.parse(event.message)?.message : event.message) || '',
+              s_object_name,
+              event,
+            ),
           )
         },
         { escape: false, buffer: false, timeout: 120000 },
       )
-
-      // _getRemoteObject<SObjectType>(s_object_name).retrieve(clone_criteria, (error, records) => {
-      //   if (error == null) {
-      //     resolve(
-      //       records.map(r => {
-      //         const result = { type: s_object_name } as Record<SObjectName, SObjectType>
-      //         _getKeys(r._fields).forEach(field_name => {
-      //           result[r._fields[field_name].shorthand || field_name] = r.get(field_name)
-      //         })
-      //         return result
-      //       }),
-      //     )
-      //     return
-      //   }
-
-      //   reject(new TroError(error.message, s_object_name, { criteria, clone_criteria }))
-      // })
     } catch (error) {
       reject(new TroError((error as Error).message, s_object_name, { criteria, clone_criteria }))
     }
