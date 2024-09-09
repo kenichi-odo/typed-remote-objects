@@ -127,7 +127,7 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
         JSON.stringify(clone_criteria),
         (result: string, event) => {
           if (event.status) {
-            const date_or_datetime_field_names = field_names.filter(_ => ['D', 'F'].includes(field_infos[_].type))
+            const date_or_datetime_field_names = field_names.filter(_ => ['D', 'F', 'f'].includes(field_infos[_].type))
             resolve(
               JSON.parse(result, (key, value) => {
                 if (date_or_datetime_field_names.includes(key)) {
