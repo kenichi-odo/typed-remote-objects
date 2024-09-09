@@ -127,11 +127,14 @@ export const fetchAll = async <SObjectName extends string, SObjectType>(
         JSON.stringify(clone_criteria),
         (result: string, event) => {
           if (event.status) {
+            //* D: Date
+            //* F: Datetime
+            //* f: Time
             const date_or_datetime_field_names = field_names.filter(_ => ['D', 'F', 'f'].includes(field_infos[_].type))
             resolve(
               JSON.parse(result, (key, value) => {
                 if (date_or_datetime_field_names.includes(key)) {
-                  const date = new Date(value)
+                  const date = new Date(field_infos[key].type === 'f' ? `1970-01-01T${value}` : value)
                   if (!isNaN(date.getTime())) {
                     return date
                   }
